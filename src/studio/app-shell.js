@@ -95,6 +95,9 @@ export class AppShell {
             </div>
           </div>
 
+          <!-- Base Gradient Blur Scrim for Floating Tool Dock -->
+          <div class="studio-dock-scrim" aria-hidden="true"></div>
+
           <!-- Contextual Floating Inspector -->
           <div id="inspector-mount"></div>
 
