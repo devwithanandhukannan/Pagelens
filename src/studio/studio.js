@@ -114,6 +114,15 @@ class StudioApp {
       }
     });
 
+    // Tool change synchronization
+    eventBus.on('tool-changed', (toolName) => {
+      const tool = toolRegistry.setActiveTool(toolName);
+      if (this.container) {
+        this.container.style.cursor = tool?.cursor || 'default';
+      }
+      this.requestRender();
+    });
+
     // Render loop triggers
     eventBus.on('document-changed', () => this.requestRender());
     eventBus.on('selection-changed', () => this.requestRender());
@@ -124,6 +133,20 @@ class StudioApp {
     eventBus.on('load-sample-capture', () => this.loadSampleCapture());
     eventBus.on('load-image-element', ({ image, title }) => {
       this.setDocumentImage(image, { title });
+    });
+    eventBus.on('fit-to-screen', () => {
+      viewport.fitToScreen(documentModel.width, documentModel.height);
+    });
+    eventBus.on('clear-annotations', () => {
+      if (documentModel.annotations.length > 0 || documentModel.crop) {
+        documentModel.annotations = [];
+        documentModel.setCrop(null);
+        this.requestRender();
+        this.toast?.show('All markups cleared');
+      }
+    });
+    eventBus.on('open-export-sheet', () => {
+      this.exportSheet?.show();
     });
   }
 
@@ -247,10 +270,19 @@ class StudioApp {
     this.emptyState.hide();
     this.transformWrapper.style.display = 'block';
 
-    const rect = this.container.getBoundingClientRect();
-    viewport.setContainerDimensions(rect.width, rect.height);
-    viewport.fitToScreen(documentModel.width, documentModel.height);
-    this.requestRender();
+    const updateDimensionsAndFit = () => {
+      const rect = this.container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        viewport.setContainerDimensions(rect.width, rect.height);
+        viewport.fitToScreen(documentModel.width, documentModel.height);
+        this.updateViewportTransform();
+        this.requestRender();
+      }
+    };
+
+    updateDimensionsAndFit();
+    requestAnimationFrame(updateDimensionsAndFit);
+    setTimeout(updateDimensionsAndFit, 50);
   }
 
   async loadSession(sessionId) {

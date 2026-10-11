@@ -58,17 +58,24 @@ export class Viewport {
   fitToScreen(docWidth, docHeight) {
     if (!docWidth || !docHeight || !this.containerWidth || !this.containerHeight) return;
 
-    const padding = 48;
+    const padding = 36;
     const availW = Math.max(100, this.containerWidth - padding * 2);
     const availH = Math.max(100, this.containerHeight - padding * 2);
 
     const scaleW = availW / docWidth;
     const scaleH = availH / docHeight;
-    const bestScale = Math.min(1.0, Math.min(scaleW, scaleH));
 
-    this.zoom = Math.max(0.1, bestScale);
-    this.panX = (this.containerWidth - docWidth * this.zoom) / 2;
-    this.panY = (this.containerHeight - docHeight * this.zoom) / 2;
+    // For tall full-page documents, fit to width and show top of page
+    if (docHeight > docWidth * 1.3) {
+      this.zoom = Math.max(0.15, Math.min(1.0, Math.round(scaleW * 100) / 100));
+      this.panX = Math.round((this.containerWidth - docWidth * this.zoom) / 2);
+      this.panY = padding;
+    } else {
+      const bestScale = Math.min(1.0, Math.min(scaleW, scaleH));
+      this.zoom = Math.max(0.1, Math.round(bestScale * 100) / 100);
+      this.panX = Math.round((this.containerWidth - docWidth * this.zoom) / 2);
+      this.panY = Math.max(padding, Math.round((this.containerHeight - docHeight * this.zoom) / 2));
+    }
 
     eventBus.emit('viewport-changed', this);
   }

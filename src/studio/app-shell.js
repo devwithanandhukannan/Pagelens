@@ -25,7 +25,7 @@ export class AppShell {
               </div>
               <div>
                 <h1 class="brand-title">Pagelens</h1>
-                <div style="font-size: 10px; color: var(--text-muted); letter-spacing: -0.01em;">Zero-Border Studio</div>
+                <div style="font-size: 10px; color: var(--text-muted); letter-spacing: -0.01em;">Screenshot Studio</div>
               </div>
             </div>
             <button class="icon-btn spring-btn" id="sidebar-close-btn" title="Collapse Sidebar">
@@ -38,44 +38,48 @@ export class AppShell {
               <div class="sidebar-section-title">Workspace</div>
               <ul class="sidebar-list">
                 <li class="sidebar-item active" data-nav="editor">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 15 3-3 3 3"/></svg>
-                  Active Capture
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                  Current Screenshot
                 </li>
                 <li class="sidebar-item" data-nav="samples">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-                  Sample Fixtures
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+                  Try Demo Sample
                 </li>
               </ul>
             </div>
 
             <div>
-              <div class="sidebar-section-title">Privacy Tools</div>
+              <div class="sidebar-section-title">Quick Actions</div>
               <ul class="sidebar-list">
-                <li class="sidebar-item" data-nav="redaction">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-crimson);"><rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor"/></svg>
-                  Permanent Redact
+                <li class="sidebar-item" data-nav="fit">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  Fit to Screen
                 </li>
-                <li class="sidebar-item" data-nav="offline">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-mint);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  Zero Network Status
+                <li class="sidebar-item" data-nav="clear">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  Clear Markups
+                </li>
+                <li class="sidebar-item" data-nav="export" style="color: var(--accent-violet);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Export & Share
                 </li>
               </ul>
             </div>
 
             <div>
-              <div class="sidebar-section-title">Capture Info</div>
-              <div style="padding: 8px 12px; background: var(--surface-nested); border-radius: var(--radius-sm); font-size: 11px; display: flex; flex-direction: column; gap: 4px;">
+              <div class="sidebar-section-title">Image Details</div>
+              <div style="padding: 10px 12px; background: var(--surface-nested); border-radius: var(--radius-sm); font-size: 11px; display: flex; flex-direction: column; gap: 6px;">
                 <div style="color: var(--text-muted); display: flex; justify-content: space-between;">
-                  <span>Mode:</span>
-                  <strong style="color: var(--text-primary);" id="sidebar-info-mode">Full-Page</strong>
+                  <span>Size:</span>
+                  <strong style="color: var(--text-primary); font-family: var(--font-mono);" id="sidebar-info-dims">—</strong>
                 </div>
                 <div style="color: var(--text-muted); display: flex; justify-content: space-between;">
-                  <span>Privacy:</span>
-                  <strong style="color: var(--accent-mint);">100% Offline</strong>
+                  <span>Type:</span>
+                  <strong style="color: var(--text-primary);" id="sidebar-info-mode">Capture</strong>
                 </div>
                 <div style="color: var(--text-muted); display: flex; justify-content: space-between;">
-                  <span>Telemetry:</span>
-                  <strong style="color: var(--text-primary);">Zero Bytes</strong>
+                  <span>Status:</span>
+                  <strong style="color: var(--accent-mint);">Ready</strong>
                 </div>
               </div>
             </div>
@@ -126,20 +130,29 @@ export class AppShell {
     // Sidebar navigation clicks
     this.root.querySelectorAll('.sidebar-item').forEach((item) => {
       item.addEventListener('click', () => {
-        this.root.querySelectorAll('.sidebar-item').forEach((i) => i.classList.remove('active'));
-        item.classList.add('active');
-
         const nav = item.dataset.nav;
-        if (nav === 'samples') {
+        if (nav === 'editor') {
+          this.root.querySelectorAll('.sidebar-item').forEach((i) => i.classList.remove('active'));
+          item.classList.add('active');
+        } else if (nav === 'samples') {
+          this.root.querySelectorAll('.sidebar-item').forEach((i) => i.classList.remove('active'));
+          item.classList.add('active');
           eventBus.emit('load-sample-capture');
-        } else if (nav === 'redaction') {
-          store.setActiveTool('redact');
-        } else if (nav === 'offline') {
-          eventBus.emit('show-toast', {
-            message: 'Pagelens operates 100% offline. Zero network calls permitted.',
-          });
+        } else if (nav === 'fit') {
+          eventBus.emit('fit-to-screen');
+        } else if (nav === 'clear') {
+          eventBus.emit('clear-annotations');
+        } else if (nav === 'export') {
+          eventBus.emit('open-export-sheet');
         }
       });
+    });
+
+    eventBus.on('document-loaded', (doc) => {
+      const dimEl = document.getElementById('sidebar-info-dims');
+      const modeEl = document.getElementById('sidebar-info-mode');
+      if (dimEl) dimEl.textContent = `${doc.width.toLocaleString()} × ${doc.height.toLocaleString()} px`;
+      if (modeEl) modeEl.textContent = doc.height > doc.width * 1.3 ? 'Full Page' : 'Visible Area';
     });
   }
 }

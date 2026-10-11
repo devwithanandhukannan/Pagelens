@@ -303,9 +303,6 @@ body {
   background-color: var(--canvas-bg);
   overflow: hidden;
   cursor: default;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   contain: layout paint;
 }
 
@@ -319,6 +316,8 @@ body {
 
 .canvas-transform-wrapper {
   position: absolute;
+  top: 0;
+  left: 0;
   transform-origin: 0 0;
   box-shadow: var(--shadow-sheet);
   transition: box-shadow var(--duration-normal) var(--ease-spring);

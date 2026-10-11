@@ -55,6 +55,40 @@ export class AnnotationLayer {
     }
 
     ctx.restore();
+
+    // Render active Crop Preview Overlay with dark veil, white boundary, and grid
+    if (documentModel.cropPreview && documentModel.cropPreview.width > 0 && documentModel.cropPreview.height > 0) {
+      const cp = documentModel.cropPreview;
+      ctx.save();
+
+      // Semi-transparent dark mask covering areas outside the crop box
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(0, 0, documentModel.width, cp.y);
+      ctx.fillRect(0, cp.y + cp.height, documentModel.width, Math.max(0, documentModel.height - (cp.y + cp.height)));
+      ctx.fillRect(0, cp.y, cp.x, cp.height);
+      ctx.fillRect(cp.x + cp.width, cp.y, Math.max(0, documentModel.width - (cp.x + cp.width)), cp.height);
+
+      // Clean white boundary
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cp.x, cp.y, cp.width, cp.height);
+
+      // Rule of thirds grid lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cp.x + cp.width / 3, cp.y);
+      ctx.lineTo(cp.x + cp.width / 3, cp.y + cp.height);
+      ctx.moveTo(cp.x + (cp.width * 2) / 3, cp.y);
+      ctx.lineTo(cp.x + (cp.width * 2) / 3, cp.y + cp.height);
+      ctx.moveTo(cp.x, cp.y + cp.height / 3);
+      ctx.lineTo(cp.x + cp.width, cp.y + cp.height / 3);
+      ctx.moveTo(cp.x, cp.y + (cp.height * 2) / 3);
+      ctx.lineTo(cp.x + cp.width, cp.y + (cp.height * 2) / 3);
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
 
   renderShape(ctx, item) {
@@ -121,13 +155,21 @@ export class AnnotationLayer {
   }
 
   renderPen(ctx, item) {
-    if (!item.points || item.points.length < 2) return;
-    const points = smoothPathPoints(item.points);
-
+    if (!item.points || item.points.length === 0) return;
     ctx.strokeStyle = item.color || '#6D63E6';
+    ctx.fillStyle = item.color || '#6D63E6';
     ctx.lineWidth = item.strokeWidth || 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    if (item.points.length === 1) {
+      ctx.beginPath();
+      ctx.arc(item.points[0].x, item.points[0].y, (item.strokeWidth || 3) / 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    const points = item.points.length > 2 ? smoothPathPoints(item.points) : item.points;
 
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
@@ -139,15 +181,24 @@ export class AnnotationLayer {
   }
 
   renderHighlighter(ctx, item) {
-    if (!item.points || item.points.length < 2) return;
+    if (!item.points || item.points.length === 0) return;
     const points = item.points;
 
     ctx.save();
     ctx.globalAlpha = 0.38;
-    ctx.strokeStyle = item.color || '#FACC15'; // Neon yellow or mint
+    ctx.strokeStyle = item.color || '#FACC15';
+    ctx.fillStyle = item.color || '#FACC15';
     ctx.lineWidth = item.strokeWidth || 18;
     ctx.lineCap = 'square';
     ctx.lineJoin = 'bevel';
+
+    if (points.length === 1) {
+      ctx.beginPath();
+      ctx.arc(points[0].x, points[0].y, (item.strokeWidth || 18) / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
 
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);

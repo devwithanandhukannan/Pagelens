@@ -17,12 +17,12 @@ export class CropTool extends ToolInterface {
   onPointerDown(e, point, store, docModel) {
     this.startPoint = { ...point };
     this.tempCrop = {
-      x: point.x,
-      y: point.y,
+      x: Math.max(0, Math.min(docModel.width, point.x)),
+      y: Math.max(0, Math.min(docModel.height, point.y)),
       width: 0,
       height: 0,
     };
-    docModel.setCrop(this.tempCrop);
+    docModel.cropPreview = this.tempCrop;
   }
 
   onPointerMove(e, point, store, docModel) {
@@ -42,22 +42,21 @@ export class CropTool extends ToolInterface {
       height = Math.abs(width) * (height >= 0 ? 1 : -1);
     }
 
-    const rx = width < 0 ? point.x : this.startPoint.x;
-    const ry = height < 0 ? point.y : this.startPoint.y;
-    const rw = Math.abs(width);
-    const rh = Math.abs(height);
+    const rx = Math.max(0, width < 0 ? point.x : this.startPoint.x);
+    const ry = Math.max(0, height < 0 ? point.y : this.startPoint.y);
+    const rw = Math.min(docModel.width - rx, Math.abs(width));
+    const rh = Math.min(docModel.height - ry, Math.abs(height));
 
     this.tempCrop = { x: rx, y: ry, width: rw, height: rh };
-    docModel.setCrop(this.tempCrop);
+    docModel.cropPreview = this.tempCrop;
   }
 
   onPointerUp(e, point, store, docModel) {
+    docModel.cropPreview = null;
     if (!this.startPoint || !this.tempCrop) return;
 
-    if (this.tempCrop.width < 20 || this.tempCrop.height < 20) {
-      docModel.setCrop(null); // Reset tiny accidental drags
-    } else {
-      const prevCrop = null;
+    if (this.tempCrop.width >= 20 && this.tempCrop.height >= 20) {
+      const prevCrop = docModel.crop ? { ...docModel.crop } : null;
       history.execute(new CropCommand(this.tempCrop, prevCrop));
     }
 
