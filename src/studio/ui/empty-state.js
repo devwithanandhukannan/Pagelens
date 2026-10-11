@@ -20,15 +20,11 @@ export class EmptyState {
         </div>
         <h2 class="empty-title">Welcome to Pagelens Studio</h2>
         <p class="empty-subtitle">
-          Capture any webpage with one click or explore the Apple Sonoma Zero-Border Studio tools using a preloaded sample capture.
+          Capture any webpage with one click or upload an image to start annotating and editing.
         </p>
 
         <div style="display: flex; gap: 12px; margin-top: 8px;">
-          <button class="action-btn primary spring-btn" id="empty-load-sample">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Load Sample Capture
-          </button>
-          <label class="action-btn secondary spring-btn" style="cursor: pointer;">
+          <label class="action-btn primary spring-btn" style="cursor: pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Upload Image
             <input type="file" id="empty-file-input" accept="image/*" style="display: none;">
@@ -39,14 +35,7 @@ export class EmptyState {
   }
 
   bindEvents() {
-    const sampleBtn = document.getElementById('empty-load-sample');
     const fileInput = document.getElementById('empty-file-input');
-
-    if (sampleBtn) {
-      sampleBtn.addEventListener('click', () => {
-        eventBus.emit('load-sample-capture');
-      });
-    }
 
     if (fileInput) {
       fileInput.addEventListener('change', (e) => {

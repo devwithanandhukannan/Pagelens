@@ -370,11 +370,11 @@ class StudioApp {
 
     sctx.fillStyle = '#F8FAFC';
     sctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
-    sctx.fillText('Sonoma Cloud Analytics', 72, 40);
+    sctx.fillText('Dashboard Overview', 72, 40);
 
     sctx.font = '500 13px -apple-system, sans-serif';
     sctx.fillStyle = '#94A3B8';
-    sctx.fillText('Production Cluster us-west-2 • Live Telemetry', 320, 40);
+    sctx.fillText('Production Metrics • Overview', 320, 40);
 
     // KPI Cards
     const cards = [
@@ -480,31 +480,10 @@ class StudioApp {
     const sampleImg = new Image();
     sampleImg.onload = () => {
       this.setDocumentImage(sampleImg, {
-        title: 'Sonoma Cloud Analytics — Live Fixture',
-        url: 'https://cloud.sonoma.internal/analytics',
-      });
-      // Add initial helpful demo annotations (arrow + bug stamp)
-      documentModel.addAnnotation({
-        id: 'sample_arrow',
-        type: 'shape',
-        shapeType: 'arrow',
-        color: '#6D63E6',
-        strokeWidth: 3,
-        x: 800,
-        y: 200,
-        width: -120,
-        height: 60,
-      });
-      documentModel.addAnnotation({
-        id: 'sample_stamp',
-        type: 'stamp',
-        x: 680,
-        y: 260,
-        number: 1,
-        color: '#6D63E6',
+        title: 'Current Screenshot',
+        url: '',
       });
       this.requestRender();
-      this.toast.show('Sample capture loaded with preconfigured annotations');
     };
     sampleImg.src = sampleCanvas.toDataURL('image/png');
   }
