@@ -130,28 +130,55 @@ export class AnnotationLayer {
   }
 
   drawArrow(ctx, fromX, fromY, toX, toY, strokeWidth) {
-    const headLen = Math.max(14, strokeWidth * 3.5);
-    const angle = Math.atan2(toY - fromY, toX - fromX);
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const length = Math.hypot(dx, dy);
+    if (length < 2) return;
 
-    // Shaft
+    const angle = Math.atan2(dy, dx);
+
+    // Sleek, razor-sharp acute angle (~20.5 degrees) and proportional head length
+    const headLen = Math.max(18, Math.min(length * 0.45, strokeWidth * 4.2 + 10));
+    const barbAngle = 0.36; // Acute angle for needle-sharp tip
+    const indent = headLen * 0.24; // Subtle swept-back notch
+
+    const tipX = toX;
+    const tipY = toY;
+    const leftX = tipX - headLen * Math.cos(angle - barbAngle);
+    const leftY = tipY - headLen * Math.sin(angle - barbAngle);
+    const rightX = tipX - headLen * Math.cos(angle + barbAngle);
+    const rightY = tipY - headLen * Math.sin(angle + barbAngle);
+    const notchX = tipX - (headLen - indent) * Math.cos(angle);
+    const notchY = tipY - (headLen - indent) * Math.sin(angle);
+
+    ctx.save();
+
+    // 1. Draw shaft up to the arrowhead base (never pokes through the needle tip)
+    ctx.beginPath();
     ctx.moveTo(fromX, fromY);
-    ctx.lineTo(toX, toY);
+    ctx.lineTo(notchX, notchY);
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Arrowhead
+    // 2. Draw razor-sharp arrowhead with miter join
     ctx.beginPath();
-    ctx.moveTo(toX, toY);
-    ctx.lineTo(
-      toX - headLen * Math.cos(angle - Math.PI / 6),
-      toY - headLen * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.lineTo(
-      toX - headLen * Math.cos(angle + Math.PI / 6),
-      toY - headLen * Math.sin(angle + Math.PI / 6)
-    );
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(leftX, leftY);
+    ctx.lineTo(notchX, notchY);
+    ctx.lineTo(rightX, rightY);
     ctx.closePath();
+
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
+
+    // Miter joined stroke ensures needle-point sharpness at the tip and wings
+    ctx.lineJoin = 'miter';
+    ctx.miterLimit = 8;
+    ctx.lineWidth = Math.max(1, strokeWidth * 0.35);
+    ctx.stroke();
+
+    ctx.restore();
   }
 
   renderPen(ctx, item) {
