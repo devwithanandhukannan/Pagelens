@@ -12,6 +12,22 @@
     "downloads",
     "tabs"
   ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content/shortcut-listener.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": {
@@ -40,15 +56,15 @@
     },
     "capture-full-page": {
       "suggested_key": {
-        "default": "Ctrl+Shift+S",
-        "mac": "Command+Shift+S"
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
       },
       "description": "Instant Full-Page Capture"
     },
     "capture-visible": {
       "suggested_key": {
-        "default": "Ctrl+Shift+V",
-        "mac": "Command+Shift+V"
+        "default": "Alt+Shift+V",
+        "mac": "Alt+Shift+V"
       },
       "description": "Capture Visible Area"
     }

@@ -98,4 +98,57 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // 5. Pre-check active tab eligibility
+  if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
+    chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+      if (!tab) return;
+      const url = tab.url || '';
+      if (url.startsWith('chrome:') || url.startsWith('chrome-extension:') || url.startsWith('devtools:') || url.startsWith('about:')) {
+        statusContainer.style.display = 'block';
+        statusText.textContent = 'Note: Internal Chrome and extension pages are protected by browser security. Switch to any regular website to capture.';
+        progressBar.style.display = 'none';
+      }
+    }).catch(() => {});
+  }
+
+  // 6. Dynamically update shortcut badges from Chrome registered commands
+  if (typeof chrome !== 'undefined' && chrome.commands?.getAll) {
+    chrome.commands.getAll((commands) => {
+      commands.forEach((cmd) => {
+        if (cmd.name === 'capture-full-page' && cmd.shortcut) {
+          document.getElementById('shortcut-full').textContent = cmd.shortcut;
+        } else if (cmd.name === 'capture-visible' && cmd.shortcut) {
+          document.getElementById('shortcut-vis').textContent = cmd.shortcut;
+        }
+      });
+    });
+  }
+
+  // 7. Keyboard shortcut listener inside the popup window
+  window.addEventListener('keydown', (e) => {
+    const isMacPlatform = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const hasMod = isMacPlatform ? (e.metaKey || e.altKey) : (e.ctrlKey || e.altKey);
+    const key = e.key.toLowerCase();
+
+    // Full Page: (Cmd/Ctrl/Alt + Shift + S) OR 'f' OR '1' OR Enter
+    if ((hasMod && e.shiftKey && key === 's') || (e.shiftKey && key === 's') || key === '1' || key === 'f' || (e.key === 'Enter' && !openStudioBtn.matches(':focus') && !visibleBtn.matches(':focus'))) {
+      e.preventDefault();
+      if (!fullPageBtn.disabled) fullPageBtn.click();
+    }
+    // Visible Area: (Cmd/Ctrl/Alt + Shift + V) OR 'v' OR '2'
+    else if ((hasMod && e.shiftKey && key === 'v') || (e.shiftKey && key === 'v') || key === '2' || key === 'v') {
+      e.preventDefault();
+      if (!visibleBtn.disabled) visibleBtn.click();
+    }
+    // Studio: 'o' OR '3'
+    else if (key === 'o' || key === '3') {
+      e.preventDefault();
+      openStudioBtn?.click();
+    }
+    // Escape closes popup
+    else if (e.key === 'Escape') {
+      window.close();
+    }
+  });
 });

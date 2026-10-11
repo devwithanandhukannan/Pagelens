@@ -71,4 +71,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
+
+  const chromeShortcutsBtn = document.getElementById('btn-open-chrome-shortcuts');
+  if (chromeShortcutsBtn) {
+    chromeShortcutsBtn.addEventListener('click', () => {
+      if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+        chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+      }
+    });
+  }
 });
