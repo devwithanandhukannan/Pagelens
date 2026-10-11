@@ -137,10 +137,10 @@ export class AnnotationLayer {
 
     const angle = Math.atan2(dy, dx);
 
-    // Sleek, razor-sharp acute angle (~20.5 degrees) and proportional head length
-    const headLen = Math.max(18, Math.min(length * 0.45, strokeWidth * 4.2 + 10));
-    const barbAngle = 0.36; // Acute angle for needle-sharp tip
-    const indent = headLen * 0.24; // Subtle swept-back notch
+    // Sleek acute angle (~17 degrees each side) for needle-sharp Apple-grade arrowheads
+    const headLen = Math.max(20, Math.min(length * 0.45, strokeWidth * 3.8 + 14));
+    const barbAngle = 0.30; // ~17.2 degrees — razor-sharp needle point
+    const indent = headLen * 0.28; // Crisp swept-back chevron notch
 
     const tipX = toX;
     const tipY = toY;
@@ -153,13 +153,19 @@ export class AnnotationLayer {
 
     ctx.save();
 
-    // 1. Draw shaft up to the arrowhead base (never pokes through the needle tip)
+    // 1. Draw shaft from starting point up to the recessed notch
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(notchX, notchY);
     ctx.lineWidth = strokeWidth;
-    ctx.lineCap = 'round';
+    ctx.lineCap = 'butt';
     ctx.stroke();
+
+    // Start cap if desired
+    ctx.beginPath();
+    ctx.arc(fromX, fromY, strokeWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
 
     // 2. Draw razor-sharp arrowhead with miter join
     ctx.beginPath();
@@ -172,9 +178,9 @@ export class AnnotationLayer {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
 
-    // Miter joined stroke ensures needle-point sharpness at the tip and wings
+    // Sharp mitered outline ensuring needle-point apex
     ctx.lineJoin = 'miter';
-    ctx.miterLimit = 8;
+    ctx.miterLimit = 10;
     ctx.lineWidth = Math.max(1, strokeWidth * 0.35);
     ctx.stroke();
 
