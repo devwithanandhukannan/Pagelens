@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 176" fill="none">
+  <defs>
+    <linearGradient id="pagelens-grad" x1="0" y1="0" x2="176" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6765F6"/>
+      <stop offset="100%" stop-color="#5552E6"/>
+    </linearGradient>
+  </defs>
+  <!-- Squircle Base -->
+  <rect width="176" height="176" rx="39" fill="url(#pagelens-grad)"/>
+
+  <!-- Lowercase 'p' with Camera Lens Aperture -->
+  <!-- Bowl/Loop -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M67 31C87.9868 31 105 48.0132 105 69C105 89.9868 87.9868 107 67 107H65V31H67ZM101.5 69C101.5 50.4985 86.5015 35.5 68 35.5H67V102.5H68C86.5015 102.5 101.5 87.5015 101.5 69Z" fill="none"/>
+  
+  <!-- Combined Master Glyph -->
+  <g fill="#FFFFFF">
+    <!-- Stem -->
+    <rect x="56" y="32" width="22" height="106" rx="11"/>
+    <!-- Outer loop -->
+    <path d="M67 32C87.9868 32 105 48.5655 105 69C105 89.4345 87.9868 106 67 106H65V32H67Z"/>
+  </g>
+
+  <!-- Counter cutout (matches background) -->
+  <circle cx="102" cy="69" r="19" fill="#5C59EC"/>
+
+  <!-- Golden Lens Focal Point -->
+  <circle cx="102" cy="69" r="7" fill="#F5B700"/>
+</svg>

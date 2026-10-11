@@ -1,0 +1,67 @@
+/**
+ * Pagelens — Design Tokens
+ * macOS Sonoma-inspired "Zero-Border" Studio Design System
+ */
+
+:root {
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-input: 12px;
+  --radius-card: 20px;
+  --radius-sheet: 28px;
+  --radius-pill: 9999px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, system-ui, sans-serif;
+  --font-mono: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+
+  /* Type Scale */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+
+  /* Shadows (Soft Ambient Layers without harsh borders) */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.10);
+  --shadow-sheet: 0 24px 60px rgba(0, 0, 0, 0.16);
+  --shadow-hud: 0 12px 32px rgba(0, 0, 0, 0.28);
+
+  /* Physics & Transitions (Apple Sonoma Smooth Spring Physics) */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --duration-instant: 90ms;
+  --duration-fast: 160ms;
+  --duration-normal: 260ms;
+  --duration-sheet: 380ms;
+
+  /* Accents */
+  --accent-violet: #6D63E6;
+  --accent-violet-hover: #5B50DC;
+  --accent-violet-tint: rgba(109, 99, 230, 0.14);
+  --accent-violet-glow: rgba(109, 99, 230, 0.35);
+
+  --accent-mint: #10B981;
+  --accent-mint-tint: rgba(16, 185, 129, 0.14);
+  --accent-mint-hover: #059669;
+
+  --accent-crimson: #EF4444;
+  --accent-crimson-tint: rgba(239, 68, 68, 0.14);
+  --accent-crimson-hover: #DC2626;
+
+  /* Spacing Grid (4pt / 8pt) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+}

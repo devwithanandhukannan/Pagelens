@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="obsidian">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagelens Automated Test Suite</title>
+  <link rel="stylesheet" href="../src/studio/styles/tokens.css">
+  <link rel="stylesheet" href="../src/studio/styles/themes.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+      background: var(--canvas-bg);
+      color: var(--text-primary);
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .test-header {
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .test-suite {
+      background: var(--surface-elevated);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .test-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-nested);
+      font-size: 13px;
+    }
+    .badge {
+      padding: 2px 10px;
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .badge.pass { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+    .badge.fail { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+    .badge.running { background: rgba(109, 99, 230, 0.15); color: #6D63E6; }
+  </style>
+</head>
+<body>
+  <div class="test-header">
+    <div>
+      <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.025em;">Pagelens Test Runner</h1>
+      <p style="font-size: 13px; color: var(--text-muted);">Core engine unit tests for geometry, document model, undo/redo, and tiling.</p>
+    </div>
+    <span id="overall-status" class="badge running">Running Tests...</span>
+  </div>
+
+  <div class="test-suite" id="results-container">
+    <!-- Results populated via JS -->
+  </div>
+
+  <script type="module">
+    import { normalizeRect, pointInRect, smoothPathPoints } from '../src/shared/geometry-utils.js';
+    import { DocumentModel } from '../src/studio/core/document-model.js';
+    import { History } from '../src/studio/core/history.js';
+    import { AddShapeCommand } from '../src/studio/core/commands/add-shape-command.js';
+    import { planTiles } from '../src/workers/tiling-planner.js';
+
+    const resultsContainer = document.getElementById('results-container');
+    const overallStatus = document.getElementById('overall-status');
+    let passes = 0;
+    let total = 0;
+
+    function assert(name, condition, details = '') {
+      total++;
+      const item = document.createElement('div');
+      item.className = 'test-item';
+      item.style.animation = 'toast-spring-in 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
+      if (condition) {
+        passes++;
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>${name}</span>
+          </div>
+          <span class="badge pass">PASS</span>
+        `;
+      } else {
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span>${name} — ${details}</span>
+          </div>
+          <span class="badge fail">FAIL</span>
+        `;
+      }
+      resultsContainer.appendChild(item);
+    }
+
+    async function runAllTests() {
+      // 1. Geometry Utils
+      const norm = normalizeRect({ x: 100, y: 100, width: -40, height: -60 });
+      assert('normalizeRect reverses negative dimensions correctly', norm.x === 60 && norm.y === 40 && norm.width === 40 && norm.height === 60);
+
+      const hit = pointInRect(50, 50, { x: 40, y: 40, width: 20, height: 20 });
+      assert('pointInRect detects inside points', hit === true);
+
+      const miss = pointInRect(10, 10, { x: 40, y: 40, width: 20, height: 20 });
+      assert('pointInRect rejects outside points', miss === false);
+
+      const smoothed = smoothPathPoints([{x: 0, y: 0}, {x: 10, y: 10}, {x: 20, y: 0}]);
+      assert('smoothPathPoints generates midpoint vertices', smoothed.length > 3);
+
+      // 2. Document Model
+      const doc = new DocumentModel();
+      const anno = doc.addAnnotation({ type: 'shape', x: 10, y: 10, width: 50, height: 50 });
+      assert('DocumentModel assigns ID and stores annotation', anno.id && doc.annotations.length === 1);
+
+      doc.setCrop({ x: 0, y: 0, width: 200, height: 150 });
+      assert('DocumentModel records non-destructive crop mask', doc.crop.width === 200);
+
+      // 3. Command History Undo/Redo
+      const hist = new History();
+      const shapeCmd = new AddShapeCommand({ id: 'test_1', type: 'stamp', number: 1 });
+      hist.execute(shapeCmd);
+      assert('History execute pushes command to undo stack', hist.canUndo() === true);
+
+      hist.undo();
+      assert('History undo pops command to redo stack', hist.canRedo() === true);
+
+      hist.redo();
+      assert('History redo reapplies command', hist.canUndo() === true);
+
+      // 4. Tiling Planner
+      const tiles = planTiles(1920, 32000, 4096);
+      assert('Tiling planner detects oversized page height', tiles.needsTiling === true);
+      assert('Tiling planner calculates correct rows count', tiles.rows === 8);
+
+      // Final status
+      if (passes === total) {
+        overallStatus.className = 'badge pass';
+        overallStatus.textContent = `All ${passes} Tests Passed`;
+      } else {
+        overallStatus.className = 'badge fail';
+        overallStatus.textContent = `${total - passes} Tests Failed`;
+      }
+    }
+
+    runAllTests();
+  </script>
+</body>
+</html>

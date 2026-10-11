@@ -1,0 +1,225 @@
+/**
+ * Pagelens — Options Page CSS
+ * macOS Sonoma-inspired "Zero-Border" Settings Studio
+ */
+
+@import '../studio/styles/tokens.css';
+@import '../studio/styles/themes.css';
+@import '../studio/styles/motion.css';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--canvas-bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.options-layout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.options-sidebar {
+  width: 250px;
+  background-color: var(--surface-primary);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.options-nav {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all var(--duration-fast) var(--ease-spring);
+}
+
+.nav-item:hover {
+  background-color: var(--surface-nested);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background-color: var(--accent-violet-tint);
+  color: var(--accent-violet);
+  font-weight: 600;
+}
+
+/* Elevated Settings Sheet */
+.options-sheet {
+  flex: 1;
+  margin: var(--space-3);
+  background-color: var(--surface-elevated);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-sheet);
+  padding: var(--space-8);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 820px;
+}
+
+.options-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+.options-header p {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Settings Card */
+.settings-card {
+  background-color: var(--surface-nested);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.setting-desc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Apple-style Toggle Switch */
+.apple-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.apple-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  transition: background-color var(--duration-fast) var(--ease-spring);
+  border-radius: var(--radius-pill);
+}
+
+[data-theme="porcelain"] .toggle-slider {
+  background-color: rgba(0, 0, 0, 0.12);
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #FFFFFF;
+  transition: transform var(--duration-fast) var(--ease-spring);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.apple-toggle input:checked + .toggle-slider {
+  background-color: var(--accent-mint);
+}
+
+.apple-toggle input:checked + .toggle-slider::before {
+  transform: translateX(18px);
+}
+
+/* Prefix Input Box */
+.prefix-input-box {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface-primary);
+  border-radius: var(--radius-input);
+  padding: 0 var(--space-3);
+  height: 38px;
+  box-shadow: var(--shadow-sm);
+  width: 280px;
+}
+
+.prefix-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-right: 6px;
+  user-select: none;
+}
+
+.prefix-input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  outline: none;
+  width: 100%;
+}

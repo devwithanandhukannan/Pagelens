@@ -1,0 +1,24 @@
+{
+  "name": "pagelens",
+  "version": "1.0.0",
+  "description": "Capture everything. Share only what you mean to. Apple-grade Zero-Border full-page screenshot capture & privacy studio.",
+  "main": "src/background/service-worker.js",
+  "type": "module",
+  "scripts": {
+    "start": "npx -y serve . -p 3000",
+    "dev": "npx -y serve . -p 3000",
+    "test": "node -e 'console.log(\"Opening test suite...\");' && open tests/runner.html"
+  },
+  "keywords": [
+    "screenshot",
+    "full-page-capture",
+    "privacy",
+    "redaction",
+    "chrome-extension",
+    "manifest-v3",
+    "macos-sonoma",
+    "zero-border"
+  ],
+  "author": "Pagelens Studio Team",
+  "license": "MIT"
+}

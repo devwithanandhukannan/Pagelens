@@ -1,0 +1,191 @@
+/**
+ * Pagelens — Motion & Smooth Micro-interactions
+ * Fluid Apple macOS Sonoma spring dynamics & seamless transitions
+ */
+
+/* Global theme transition smoothing */
+body,
+.studio-app,
+.studio-sidebar,
+.studio-workspace-sheet,
+.studio-topbar,
+.studio-canvas-container,
+.studio-floating-toolbar,
+.studio-floating-inspector,
+.export-sheet,
+.settings-card {
+  transition: background-color var(--duration-normal) var(--ease-spring),
+              color var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-spring);
+}
+
+/* Sleek 5px scrollbars with transparent track */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-pill);
+  transition: background var(--duration-fast) var(--ease-spring);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Smooth Canvas Transform Wrapper (seamless zoom and pan transitions) */
+.canvas-transform-wrapper {
+  transition: transform 0.12s var(--ease-spring);
+  will-change: transform;
+}
+
+/* Disable transition during active mouse pan dragging for zero-latency tracking */
+.studio-canvas-container.panning .canvas-transform-wrapper,
+.studio-canvas-container.dragging-active .canvas-transform-wrapper {
+  transition: none !important;
+}
+
+/* Interactive elements spring physics */
+.spring-btn {
+  transition: transform var(--duration-fast) var(--ease-spring),
+              background-color var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-spring),
+              opacity var(--duration-fast) var(--ease-spring),
+              color var(--duration-fast) var(--ease-spring);
+  will-change: transform;
+  cursor: pointer;
+}
+
+.spring-btn:hover {
+  transform: translateY(-1.5px);
+}
+
+.spring-btn:active {
+  transform: scale(0.96);
+  transition-duration: var(--duration-instant);
+}
+
+/* Tool Buttons with smooth spring state transitions */
+.tool-btn {
+  transition: transform var(--duration-fast) var(--ease-spring),
+              background-color var(--duration-normal) var(--ease-spring),
+              color var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-spring);
+  will-change: transform;
+}
+
+.tool-btn:hover {
+  transform: translateY(-1.5px) scale(1.04);
+}
+
+.tool-btn:active {
+  transform: scale(0.95);
+}
+
+.tool-btn.active {
+  transform: scale(1.02);
+}
+
+/* Floating HUD Toast animation with smooth spring overshoot */
+@keyframes toast-spring-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 36px) scale(0.92);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-50%, -3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes toast-spring-out {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 24px) scale(0.94);
+  }
+}
+
+/* Sheet slide up animation */
+@keyframes sheet-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(100%) scale(0.97);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Floating Toolbar intro */
+@keyframes toolbar-float-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 36px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Inspector smooth spring pop */
+@keyframes inspector-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Pulse animation */
+@keyframes pagelens-smooth-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(109, 99, 230, 0.4);
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.7;
+    box-shadow: 0 0 18px rgba(109, 99, 230, 0.7);
+  }
+}
+
+/* Backdrop smooth fade */
+.export-sheet-backdrop {
+  transition: opacity var(--duration-sheet) var(--ease-spring),
+              backdrop-filter var(--duration-sheet) var(--ease-spring);
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
