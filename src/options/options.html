@@ -66,6 +66,17 @@
 
         <div class="setting-row">
           <div class="setting-info">
+            <span class="setting-title">Retain Previous Screenshots (Last 10)</span>
+            <span class="setting-desc">Automatically keep up to 10 recent captures in local storage to switch between.</span>
+          </div>
+          <label class="apple-toggle">
+            <input type="checkbox" id="setting-save-history" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
             <span class="setting-title">Appearance Theme</span>
             <span class="setting-desc">Choose between Obsidian dark mode and Porcelain light mode.</span>
           </div>
@@ -80,6 +91,19 @@
       <!-- Section: Export -->
       <section class="settings-card" id="section-export">
         <h2 class="card-title">Export & Naming</h2>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-title">Default Save Location</span>
+            <span class="setting-desc">Primary destination where screenshot files are saved on your computer.</span>
+          </div>
+          <select id="setting-save-location" style="background: var(--surface-primary); color: var(--text-primary); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; outline: none;">
+            <option value="Desktop" selected>Desktop (Default)</option>
+            <option value="Downloads">Downloads Root</option>
+            <option value="Pagelens">Pagelens Subfolder</option>
+            <option value="custom">Custom Folder...</option>
+          </select>
+        </div>
 
         <div class="setting-row">
           <div class="setting-info">
@@ -111,7 +135,7 @@
           </div>
           <div class="prefix-input-box">
             <span class="prefix-label">DIR/</span>
-            <input type="text" id="setting-folder" class="prefix-input" placeholder="Pagelens">
+            <input type="text" id="setting-folder" class="prefix-input" placeholder="Desktop">
           </div>
         </div>
       </section>

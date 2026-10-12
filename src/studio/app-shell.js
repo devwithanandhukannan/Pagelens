@@ -46,6 +46,12 @@ export class AppShell {
 
           <!-- Settings Modal Mount -->
           <div id="settings-modal-mount"></div>
+
+          <!-- Files Manager Modal Mount (Previous Screenshots) -->
+          <div id="files-modal-mount"></div>
+
+          <!-- Floating Right-Side Viewport Navigation Dock (Zoom, Recenter, Theme, Settings) -->
+          <div id="viewport-dock-mount"></div>
         </main>
       </div>
     `;

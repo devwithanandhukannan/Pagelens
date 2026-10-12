@@ -1,7 +1,8 @@
 /**
  * Pagelens — Top Bar UI Component
- * Top bar housing Pagelens brand, undo/redo, dynamic markup delete button,
- * editable file name, zoom controls, theme toggle, and fast high-visibility red download.
+ * Top bar housing Pagelens brand, Files manager button, undo/redo, markup delete button,
+ * spacious editable file name, dimensions, and high-visibility red download action.
+ * (Zoom, recenter, theme, and settings are moved to the right-side ViewportDock to prevent crowding).
  */
 
 import { eventBus } from '../core/event-bus.js';
@@ -9,15 +10,19 @@ import { history } from '../core/history.js';
 import { viewport } from '../core/viewport.js';
 import { ExportService } from '../services/export-service.js';
 import { DeleteCommand } from '../core/commands/move-command.js';
+import { BlobStore } from '../services/blob-store.js';
 
 export class TopBar {
   constructor(container, store, documentModel) {
     this.container = container;
     this.store = store;
     this.documentModel = documentModel;
+    this.currentFormat = 'png';
     this.render();
     this.bindEvents();
     this.updateDeleteButtonState();
+    this.refreshHistoryBadge();
+    this.loadCurrentFormat();
   }
 
   render() {
@@ -31,6 +36,21 @@ export class TopBar {
             </div>
             <span class="brand-text">Pagelens</span>
           </div>
+
+          <div class="topbar-divider"></div>
+
+          <!-- Files Manager Trigger (Previous Screenshots) -->
+          <button class="topbar-files-btn spring-btn" id="topbar-files-btn" title="View & Manage Previous Screenshots (Files)" aria-label="View Previous Screenshots">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="files-btn-text">Files</span>
+            <span class="history-count-badge" id="history-count-badge" style="display: none;">0</span>
+          </button>
+
+          <!-- Retake Action Trigger -->
+          <button class="topbar-retake-btn spring-btn" id="topbar-retake-btn" title="Retake Screenshot of this webpage (R)" aria-label="Retake Screenshot">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span class="retake-btn-text">Retake</span>
+          </button>
 
           <div class="topbar-divider"></div>
 
@@ -72,39 +92,16 @@ export class TopBar {
         </div>
 
         <div class="topbar-right">
-          <!-- Zoom Controls -->
-          <div class="zoom-controls-cluster">
-            <button class="icon-btn spring-btn" id="topbar-zoom-out" title="Zoom Out (-)" aria-label="Zoom Out">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            </button>
-            <span id="zoom-level-label" style="font-size: 12px; font-family: var(--font-mono); color: var(--text-muted); min-width: 40px; text-align: center;">100%</span>
-            <button class="icon-btn spring-btn" id="topbar-zoom-in" title="Zoom In (+)" aria-label="Zoom In">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            </button>
-            <button class="icon-btn spring-btn" id="topbar-zoom-fit" title="Fit to Screen" aria-label="Fit to Screen">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-            </button>
-          </div>
-
-          <!-- Theme Toggle (Obsidian / Porcelain) -->
-          <button class="icon-btn spring-btn" id="topbar-theme-toggle" title="Toggle Theme (Obsidian / Porcelain)" aria-label="Toggle Theme">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-          </button>
-
-          <!-- Settings Button -->
-          <button class="icon-btn spring-btn" id="topbar-settings-btn" title="Studio & Capture Settings" aria-label="Settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </button>
-
-          <!-- Primary Red Download Action Button (High-Visibility Rapid Call To Action) -->
+          <!-- Primary Red Download Action Button (Displays format e.g. PNG / JPEG / PDF) -->
           <div class="download-cluster">
-            <button class="action-btn primary spring-btn download-btn-red" id="topbar-download-btn" title="Download Screenshot Now">
+            <button class="action-btn primary spring-btn download-btn-red" id="topbar-download-btn" title="Download Screenshot">
               <svg class="download-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               <span class="download-label">Download</span>
+              <span class="download-format-badge" id="topbar-format-badge">PNG</span>
             </button>
 
             <!-- Export Formats & Sharing Options Dropdown/Sheet Trigger -->
@@ -154,6 +151,24 @@ export class TopBar {
     const titleInput = document.getElementById('doc-title-input');
     const downloadBtn = document.getElementById('topbar-download-btn');
     const exportOptionsBtn = document.getElementById('topbar-export-options-btn');
+    const filesBtn = document.getElementById('topbar-files-btn');
+    const retakeBtn = document.getElementById('topbar-retake-btn');
+
+    // Open Files modal
+    if (filesBtn) {
+      filesBtn.addEventListener('click', () => {
+        eventBus.emit('open-files-modal');
+      });
+    }
+
+    // Retake current screenshot
+    if (retakeBtn) {
+      retakeBtn.addEventListener('click', () => {
+        retakeBtn.classList.add('loading');
+        eventBus.emit('retake-current-capture');
+        setTimeout(() => retakeBtn.classList.remove('loading'), 3500);
+      });
+    }
 
     // Undo / Redo
     undoBtn.addEventListener('click', () => history.undo());
@@ -190,15 +205,25 @@ export class TopBar {
     eventBus.on('document-changed', () => this.updateDeleteButtonState());
     eventBus.on('crop-changed', () => this.updateDeleteButtonState());
 
-    // Editable Title Input
+    // Dynamic Title Input sizing and committing
+    const updateTitleInputWidth = () => {
+      if (!titleInput) return;
+      const val = titleInput.value || '';
+      const charLen = Math.max(14, val.length + 2);
+      titleInput.style.width = `min(680px, max(140px, ${charLen}ch))`;
+      titleInput.title = val ? `File name: ${val}` : 'Screenshot File Name';
+    };
+
     const commitTitle = () => {
       const cleanTitle = (titleInput.value || '').trim() || 'Screenshot';
       this.documentModel.title = cleanTitle;
       titleInput.value = cleanTitle;
+      updateTitleInputWidth();
     };
 
     titleInput.addEventListener('input', () => {
       this.documentModel.title = (titleInput.value || '').trim() || 'Screenshot';
+      updateTitleInputWidth();
     });
 
     titleInput.addEventListener('change', commitTitle);
@@ -210,57 +235,47 @@ export class TopBar {
       }
     });
 
-    // Zoom buttons
-    document.getElementById('topbar-zoom-in').addEventListener('click', () => viewport.zoomIn());
-    document.getElementById('topbar-zoom-out').addEventListener('click', () => viewport.zoomOut());
-    document.getElementById('topbar-zoom-fit').addEventListener('click', () => {
-      viewport.fitToScreen(this.documentModel.width, this.documentModel.height);
+    eventBus.on('history-updated', () => {
+      this.refreshHistoryBadge();
     });
-
-    eventBus.on('viewport-changed', (vp) => {
-      const label = document.getElementById('zoom-level-label');
-      if (label) {
-        label.textContent = `${Math.round(vp.zoom * 100)}%`;
-      }
-    });
-
-    // Theme toggle
-    document.getElementById('topbar-theme-toggle').addEventListener('click', () => {
-      const current = this.store.getState().theme;
-      const next = current === 'obsidian' ? 'porcelain' : 'obsidian';
-      this.store.setTheme(next);
-    });
-
-    // Settings modal trigger
-    const settingsBtn = document.getElementById('topbar-settings-btn');
-    if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        eventBus.emit('open-settings-modal');
-      });
-    }
 
     // Document loaded updates title & dimensions & delete button state
     eventBus.on('document-loaded', (doc) => {
-      if (titleInput) titleInput.value = doc.title || 'Current Screenshot';
+      if (titleInput) {
+        titleInput.value = doc.title || 'Current Screenshot';
+        updateTitleInputWidth();
+      }
       const dimEl = document.getElementById('doc-dimensions-display');
       if (dimEl) dimEl.textContent = `${doc.width.toLocaleString()} × ${doc.height.toLocaleString()} px`;
       this.updateDeleteButtonState();
     });
 
-    // Fast Red Download Button execution
+    // Listen for settings changes to update format badge
+    eventBus.on('settings-changed', (newSettings) => {
+      if (newSettings && newSettings.defaultFormat) {
+        this.updateFormatBadge(newSettings.defaultFormat);
+      }
+    });
+
+    // Fast Red Download Button execution using selected format (PNG, JPEG, PDF)
     downloadBtn.addEventListener('click', async () => {
       downloadBtn.classList.add('downloading');
       try {
         const title = (this.documentModel.title || 'Screenshot').trim();
-        await ExportService.exportDocument(this.documentModel, {
-          format: 'png',
+        const fmt = (this.currentFormat || 'png').toLowerCase();
+        const res = await ExportService.exportDocument(this.documentModel, {
+          format: fmt,
           quality: 0.95,
           destination: 'download',
           title,
         });
 
+        const destMsg = res?.destination === 'directory'
+          ? `Saved ${res.filename} to 📁 ${res.folder}`
+          : `Saved ${title}.${fmt}`;
+
         eventBus.emit('show-toast', {
-          message: `Saved ${title}.png to Downloads`,
+          message: destMsg,
           options: { icon: 'check', duration: 3600 }
         });
       } catch (err) {
@@ -276,7 +291,7 @@ export class TopBar {
       eventBus.emit('open-export-sheet');
     });
 
-    // Standard Undo/Redo/Delete keyboard shortcuts
+    // Keyboard shortcuts (Undo, Redo, Recenter '0', Delete)
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
@@ -289,6 +304,24 @@ export class TopBar {
         e.preventDefault();
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
         history.redo();
+        e.preventDefault();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+        const selectedId = this.store.getState().selectedObjectId;
+        if (!selectedId && this.documentModel.baseImage) {
+          eventBus.emit('copy-to-clipboard');
+          e.preventDefault();
+        }
+      } else if (e.key === '0') {
+        viewport.recenter(this.documentModel.width, this.documentModel.height);
+        eventBus.emit('viewport-changed', viewport);
+        e.preventDefault();
+      } else if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const retakeBtn = document.getElementById('topbar-retake-btn');
+        if (retakeBtn) {
+          retakeBtn.classList.add('loading');
+          setTimeout(() => retakeBtn.classList.remove('loading'), 3500);
+        }
+        eventBus.emit('retake-current-capture');
         e.preventDefault();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         const selectedId = this.store.getState().selectedObjectId;
@@ -304,5 +337,51 @@ export class TopBar {
         }
       }
     });
+
+    updateTitleInputWidth();
+  }
+
+  async loadCurrentFormat() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        const stored = await chrome.storage.local.get('pagelens_settings');
+        if (stored?.pagelens_settings?.defaultFormat) {
+          this.updateFormatBadge(stored.pagelens_settings.defaultFormat);
+          return;
+        }
+      }
+      const local = localStorage.getItem('pagelens_settings');
+      if (local) {
+        const parsed = JSON.parse(local);
+        if (parsed.defaultFormat) {
+          this.updateFormatBadge(parsed.defaultFormat);
+          return;
+        }
+      }
+    } catch (_) {}
+    this.updateFormatBadge('png');
+  }
+
+  updateFormatBadge(fmt) {
+    this.currentFormat = (fmt || 'png').toLowerCase();
+    const badge = document.getElementById('topbar-format-badge');
+    if (badge) {
+      badge.textContent = this.currentFormat.toUpperCase();
+    }
+  }
+
+  async refreshHistoryBadge() {
+    try {
+      const captures = await BlobStore.getRecentCaptures(10);
+      const badge = document.getElementById('history-count-badge');
+      if (badge) {
+        if (captures.length > 0) {
+          badge.textContent = captures.length;
+          badge.style.display = 'inline-flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    } catch (_) {}
   }
 }

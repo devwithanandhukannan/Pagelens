@@ -23,6 +23,9 @@ export class DocumentModel {
     this.height = image.height || image.naturalHeight || 600;
     this.title = meta.title || this.title;
     this.url = meta.url || this.url;
+    this.tabId = meta.tabId || this.tabId;
+    this.captureType = meta.type || meta.captureType || this.captureType || 'full-page';
+    this.sessionId = meta.sessionId || this.sessionId;
     this.timestamp = meta.timestamp || Date.now();
     this.crop = null;
     this.annotations = [];

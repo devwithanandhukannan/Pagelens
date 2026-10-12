@@ -35,6 +35,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
 
+        case 'PAGELENS_RETAKE': {
+          const res = await captureController.retakeCapture({
+            url: message.url,
+            tabId: message.tabId,
+            type: message.captureType || 'full-page',
+            studioTabId: sender.tab?.id,
+          });
+          sendResponse({ success: true, ...res });
+          break;
+        }
+
         case 'PAGELENS_GET_CAPTURE_STATE': {
           const state = await SessionRegistry.getState();
           sendResponse({ success: true, state });

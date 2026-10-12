@@ -190,20 +190,6 @@ body,
   animation: screenshot-reveal 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* High-Visibility Red Download Button Ambient Pulse */
-@keyframes red-download-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 4px 14px rgba(220, 38, 38, 0.45),
-      0 1px 3px rgba(0, 0, 0, 0.2);
-  }
-  50% {
-    box-shadow: 
-      0 6px 22px rgba(239, 68, 68, 0.7),
-      0 0 0 3px rgba(239, 68, 68, 0.22);
-  }
-}
-
 /* Micro-interaction: Download Arrow Bounce */
 @keyframes download-arrow-bounce {
   0% {

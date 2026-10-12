@@ -8,6 +8,7 @@ import { generatePdfFromCanvas } from '../../workers/pdf-worker.js';
 import { encodeCanvas } from '../../workers/encode-worker.js';
 import { ClipboardService } from './clipboard.js';
 import { DownloadManager } from '../../background/download-manager.js';
+import { DirectoryPickerService } from './directory-picker.js';
 
 export class ExportService {
   static async exportDocument(documentModel, options = {}) {
@@ -30,10 +31,24 @@ export class ExportService {
       });
 
       const filename = DownloadManager.generateFilename(title, 'pdf');
+
+      // Check if user configured a picked directory
+      try {
+        const storedHandle = await DirectoryPickerService.getStoredHandle();
+        if (storedHandle) {
+          const res = await DirectoryPickerService.saveBlobToDirectory(pdfBlob, filename);
+          if (res?.success) {
+            return { format: 'pdf', filename, destination: 'directory', folder: res.folderName };
+          }
+        }
+      } catch (err) {
+        console.warn('[ExportService] Directory handle save failed, falling back to download:', err);
+      }
+
       const dataUrl = URL.createObjectURL(pdfBlob);
       await DownloadManager.downloadDataUrl(dataUrl, filename);
       setTimeout(() => URL.revokeObjectURL(dataUrl), 10000);
-      return { format: 'pdf', filename };
+      return { format: 'pdf', filename, destination: 'download' };
     }
 
     // 3. Handle Image formats (PNG / JPEG)
@@ -45,6 +60,20 @@ export class ExportService {
     } else {
       const ext = format === 'jpeg' ? 'jpg' : 'png';
       const filename = DownloadManager.generateFilename(title, ext);
+
+      // Check if user configured a picked directory
+      try {
+        const storedHandle = await DirectoryPickerService.getStoredHandle();
+        if (storedHandle) {
+          const res = await DirectoryPickerService.saveBlobToDirectory(imageBlob, filename);
+          if (res?.success) {
+            return { format, filename, destination: 'directory', folder: res.folderName };
+          }
+        }
+      } catch (err) {
+        console.warn('[ExportService] Directory handle save failed, falling back to download:', err);
+      }
+
       const dataUrl = URL.createObjectURL(imageBlob);
       await DownloadManager.downloadDataUrl(dataUrl, filename);
       setTimeout(() => URL.revokeObjectURL(dataUrl), 10000);
@@ -52,3 +81,4 @@ export class ExportService {
     }
   }
 }
+

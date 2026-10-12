@@ -12,8 +12,11 @@ import { Toast } from './ui/toast.js';
 import { ExportSheet } from './ui/export-sheet.js';
 import { SettingsModal } from './ui/settings-modal.js';
 import { EmptyState } from './ui/empty-state.js';
+import { ViewportDock } from './ui/viewport-dock.js';
+import { FilesModal } from './ui/files-modal.js';
 import { AutosaveService } from './services/autosave.js';
 import { BlobStore } from './services/blob-store.js';
+import { ExportService } from './services/export-service.js';
 
 import { store } from './core/store.js';
 import { eventBus } from './core/event-bus.js';
@@ -48,6 +51,8 @@ class StudioApp {
     this.toast = new Toast(document.getElementById('toast-mount'));
     this.exportSheet = new ExportSheet(document.getElementById('export-sheet-mount'), documentModel);
     this.settingsModal = new SettingsModal(document.getElementById('settings-modal-mount'), store);
+    this.filesModal = new FilesModal(document.getElementById('files-modal-mount'));
+    this.viewportDock = new ViewportDock(document.getElementById('viewport-dock-mount'));
     this.emptyState = new EmptyState(document.getElementById('empty-state-mount'));
     this.autosave = new AutosaveService(documentModel);
 
@@ -133,11 +138,15 @@ class StudioApp {
 
   bindWindowEvents() {
     eventBus.on('load-sample-capture', () => this.loadSampleCapture());
-    eventBus.on('load-image-element', ({ image, title }) => {
-      this.setDocumentImage(image, { title });
+    eventBus.on('load-image-element', ({ image, title, fromHistory }) => {
+      this.setDocumentImage(image, { title, isExisting: !!fromHistory });
     });
     eventBus.on('fit-to-screen', () => {
       viewport.fitToScreen(documentModel.width, documentModel.height);
+    });
+    eventBus.on('recenter-canvas', () => {
+      viewport.recenter(documentModel.width, documentModel.height);
+      this.updateViewportTransform();
     });
     eventBus.on('clear-annotations', () => {
       if (documentModel.annotations.length > 0 || documentModel.crop) {
@@ -152,6 +161,71 @@ class StudioApp {
     eventBus.on('open-export-sheet', () => {
       this.exportSheet?.show();
     });
+
+    eventBus.on('copy-to-clipboard', async () => {
+      try {
+        await ExportService.exportDocument(documentModel, {
+          format: 'png',
+          destination: 'clipboard',
+        });
+        this.toast?.show('Screenshot copied to clipboard', { icon: 'check' });
+      } catch (err) {
+        this.toast?.show(`Copy failed: ${err.message}`, { icon: 'alert' });
+      }
+    });
+
+    // Listen for retake background updates
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.addListener((msg) => {
+        if (msg.type === 'PAGELENS_SESSION_UPDATED' && msg.sessionId) {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('sessionId', msg.sessionId);
+          window.history.replaceState({}, '', newUrl.toString());
+          this.loadSession(msg.sessionId);
+          this.toast?.show('Screenshot retaken successfully!', { icon: 'check' });
+        }
+      });
+    }
+
+    eventBus.on('retake-current-capture', async (opts = {}) => {
+      await this.retakeCurrentCapture(opts);
+    });
+  }
+
+  async retakeCurrentCapture(opts = {}) {
+    const meta = opts.meta || this.currentCaptureMeta || {
+      url: documentModel.url,
+      tabId: documentModel.tabId,
+      type: documentModel.captureType || 'full-page',
+    };
+
+    if (!meta.url && !meta.tabId) {
+      this.toast?.show('No source webpage found to retake.', { icon: 'alert' });
+      return;
+    }
+
+    this.toast?.show('Retaking screenshot from source page...', { icon: 'clock' });
+
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        const response = await chrome.runtime.sendMessage({
+          type: 'PAGELENS_RETAKE',
+          url: meta.url,
+          tabId: meta.tabId,
+          captureType: opts.captureType || meta.type || 'full-page',
+        });
+        if (response && response.sessionId) {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('sessionId', response.sessionId);
+          window.history.replaceState({}, '', newUrl.toString());
+          await this.loadSession(response.sessionId);
+          this.toast?.show('Screenshot retaken successfully!', { icon: 'check' });
+        }
+      }
+    } catch (err) {
+      console.error('[Studio] Retake failed:', err);
+      this.toast?.show(err.message || 'Failed to retake screenshot.', { icon: 'alert' });
+    }
   }
 
   onPointerDown(e) {
@@ -274,6 +348,9 @@ class StudioApp {
     this.emptyState.hide();
     this.transformWrapper.style.display = 'block';
 
+    // Persist to recent captures history (last 10 screenshots) if saveHistory is enabled
+    this.persistRecentCapture(image, meta);
+
     // Trigger premium minimalist screenshot reveal entrance animation
     this.transformWrapper.classList.remove('screenshot-enter-active');
     void this.transformWrapper.offsetWidth;
@@ -302,23 +379,80 @@ class StudioApp {
     setTimeout(updateDimensionsAndFit, 50);
   }
 
+  async persistRecentCapture(image, meta = {}) {
+    if (!image || meta.isSample || meta.isExisting) return;
+    try {
+      let saveHistory = true;
+      if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+        const stored = await chrome.storage.local.get('pagelens_settings');
+        if (stored?.pagelens_settings?.saveHistory !== undefined) {
+          saveHistory = stored.pagelens_settings.saveHistory;
+        }
+      } else {
+        const local = localStorage.getItem('pagelens_settings');
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (parsed.saveHistory !== undefined) saveHistory = parsed.saveHistory;
+        }
+      }
+      if (!saveHistory) return;
+
+      const tempCanvas = document.createElement('canvas');
+      const w = image.naturalWidth || image.width || documentModel.width;
+      const h = image.naturalHeight || image.height || documentModel.height;
+      if (!w || !h) return;
+      tempCanvas.width = Math.min(w, 2400);
+      tempCanvas.height = Math.min(h, Math.round(2400 * (h / w)));
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(image, 0, 0, tempCanvas.width, tempCanvas.height);
+
+      tempCanvas.toBlob(async (blob) => {
+        if (blob) {
+          const sid = meta.sessionId || ('capture_' + Date.now());
+          await BlobStore.saveCapture(sid, blob, {
+            title: meta.title || documentModel.title || 'Screenshot',
+            url: meta.url || '',
+            size: blob.size,
+            width: w,
+            height: h,
+            timestamp: Date.now()
+          });
+          eventBus.emit('history-updated');
+        }
+      }, 'image/png');
+    } catch (e) {
+      // Non-blocking persistence
+    }
+  }
+
   async loadSession(sessionId) {
+    this.currentSessionId = sessionId;
     try {
       // Try IndexedDB first
       const record = await BlobStore.getCapture(sessionId);
       if (record) {
+        const meta = {
+          sessionId,
+          title: record.title || 'Captured Page',
+          url: record.url || '',
+          tabId: record.tabId,
+          type: record.type || 'full-page',
+          isExisting: true,
+        };
+        this.currentCaptureMeta = meta;
+
         if (record.blob) {
           const blob = record.blob instanceof Blob ? record.blob : new Blob([record.blob], { type: 'image/png' });
           const img = new Image();
           img.onload = () => {
-            this.setDocumentImage(img, { title: record.title || 'Captured Page' });
+            this.setDocumentImage(img, meta);
           };
           img.src = URL.createObjectURL(blob);
           return;
         } else if (record.dataUrl) {
           const img = new Image();
           img.onload = () => {
-            this.setDocumentImage(img, { title: record.title || 'Captured Page' });
+            this.setDocumentImage(img, meta);
           };
           img.src = record.dataUrl;
           return;
@@ -329,13 +463,25 @@ class StudioApp {
       if (typeof chrome !== 'undefined' && chrome.storage?.local) {
         const res = await chrome.storage.local.get(sessionId);
         const data = res[sessionId];
-        if (data && data.dataUrl) {
-          const img = new Image();
-          img.onload = () => {
-            this.setDocumentImage(img, { title: data.title || 'Captured Page' });
+        if (data) {
+          const meta = {
+            sessionId,
+            title: data.title || 'Captured Page',
+            url: data.url || '',
+            tabId: data.tabId,
+            type: data.type || 'full-page',
+            isExisting: true,
           };
-          img.src = data.dataUrl;
-          return;
+          this.currentCaptureMeta = meta;
+
+          if (data.dataUrl) {
+            const img = new Image();
+            img.onload = () => {
+              this.setDocumentImage(img, meta);
+            };
+            img.src = data.dataUrl;
+            return;
+          }
         }
       }
     } catch (e) {
