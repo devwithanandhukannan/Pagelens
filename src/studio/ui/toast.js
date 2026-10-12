@@ -53,6 +53,12 @@ export class Toast {
       });
     }
 
+    // Keep at most 2 toasts simultaneously to prevent screen clutter
+    while (this.toastBox.children.length >= 2) {
+      const old = this.toastBox.firstChild;
+      if (old) old.remove();
+    }
+
     this.toastBox.appendChild(toastEl);
 
     setTimeout(() => {

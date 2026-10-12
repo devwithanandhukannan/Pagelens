@@ -73,26 +73,6 @@ export class CaptureController {
     }
 
     try {
-      // Extract visible text, numbers, and badges for Apple Live Text
-      let textBlocks = [];
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['src/content/probe-entry.js'],
-        });
-        const geomRes = await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_MEASURE_PAGE' }).catch(() => null);
-        const dpr = (geomRes && geomRes.dpr) ? geomRes.dpr : 1;
-        const textRes = await chrome.tabs.sendMessage(tab.id, {
-          type: 'PAGELENS_EXTRACT_TEXT_BLOCKS',
-          payload: { visibleOnly: true, dpr }
-        });
-        if (textRes && textRes.textBlocks) {
-          textBlocks = textRes.textBlocks;
-        }
-      } catch (probeErr) {
-        console.warn('[CaptureController] Visible text extraction note:', probeErr);
-      }
-
       const dataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
 
       // Save binary image in BlobStore (IndexedDB)
@@ -104,7 +84,7 @@ export class CaptureController {
           url: tab.url,
           tabId: tab.id,
           type: 'visible',
-          textBlocks: textBlocks || [],
+          textBlocks: [],
         });
       } catch (blobErr) {
         console.warn('[CaptureController] Failed to persist in BlobStore:', blobErr);
@@ -119,7 +99,7 @@ export class CaptureController {
           tabId: tab.id,
           timestamp: Date.now(),
           type: 'visible',
-          textBlocks: textBlocks || [],
+          textBlocks: [],
         },
         pagelens_last_capture_id: sessionId,
       });
@@ -241,24 +221,11 @@ export class CaptureController {
         // Capture visible slice with resilient rate-limit throttling and backoff retry
         const sliceDataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
 
-        // Extract visible text blocks in this exact slice for pixel-perfect alignment
-        let sliceBlocks = [];
-        try {
-          const textRes = await chrome.tabs.sendMessage(tab.id, {
-            type: 'PAGELENS_EXTRACT_TEXT_BLOCKS',
-            payload: { visibleOnly: true, dpr: geom.dpr }
-          });
-          if (textRes && textRes.textBlocks) {
-            sliceBlocks = textRes.textBlocks;
-          }
-        } catch (_) {}
-
         slices.push({
           index: i,
           y: (scrollRes && scrollRes.actualY !== undefined) ? scrollRes.actualY : targetY,
           height: isElementScroll ? scrollStep : viewportH,
           dataUrl: sliceDataUrl,
-          textBlocks: sliceBlocks,
         });
       }
 
@@ -289,44 +256,6 @@ export class CaptureController {
         bgColor: geom.bgColor || '#111b21',
       });
 
-      // 6.5. Assemble global text blocks from slice captures with exact Y-offsets
-      const combinedBlocks = [];
-      const seenBlockKeys = new Set();
-      for (const slice of slices) {
-        if (!slice.textBlocks || slice.textBlocks.length === 0) continue;
-        const sliceYOffset = Math.round(
-          (isElementScroll ? (topOffset + slice.y) : slice.y) * geom.dpr
-        );
-        for (const block of slice.textBlocks) {
-          const globalY = sliceYOffset + block.y;
-          const globalX = block.x;
-          const key = `${Math.round(globalX / 10)}_${Math.round(globalY / 10)}_${block.text.slice(0, 16)}`;
-          if (!seenBlockKeys.has(key)) {
-            seenBlockKeys.add(key);
-            combinedBlocks.push({
-              ...block,
-              x: globalX,
-              y: globalY
-            });
-          }
-        }
-      }
-
-      if (combinedBlocks.length > 0) {
-        geom.textBlocks = combinedBlocks;
-      } else {
-        // Fallback: extract across the entire document
-        try {
-          const textRes = await chrome.tabs.sendMessage(tab.id, {
-            type: 'PAGELENS_EXTRACT_TEXT_BLOCKS',
-            payload: { visibleOnly: false, dpr: geom.dpr }
-          });
-          if (textRes && textRes.textBlocks && textRes.textBlocks.length > 0) {
-            geom.textBlocks = textRes.textBlocks;
-          }
-        } catch (_) {}
-      }
-
       // 7. Restore page
       await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_RESTORE_PAGE' });
 
@@ -339,7 +268,7 @@ export class CaptureController {
           width: stitched.width,
           height: stitched.height,
           type: 'full-page',
-          textBlocks: geom.textBlocks || [],
+          textBlocks: [],
         });
       } catch (blobErr) {
         console.warn('[CaptureController] Failed to persist stitched blob in BlobStore:', blobErr);
@@ -356,7 +285,7 @@ export class CaptureController {
           height: stitched.height,
           timestamp: Date.now(),
           type: 'full-page',
-          textBlocks: geom.textBlocks || [],
+          textBlocks: [],
         },
         pagelens_last_capture_id: sessionId,
       });

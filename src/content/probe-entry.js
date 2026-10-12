@@ -661,7 +661,6 @@
 
             case 'PAGELENS_MEASURE_PAGE': {
               const geom = measurePage();
-              geom.textBlocks = extractPageTextBlocks({ visibleOnly: false, dpr: geom.dpr });
               initializeRestoreGuard(geom.scrollX, geom.scrollY);
               freezeMotion();
               findAndMarkStickyElements();

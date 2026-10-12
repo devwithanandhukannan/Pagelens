@@ -20,5 +20,8 @@
     "zero-border"
   ],
   "author": "Pagelens Studio Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
 }
