@@ -167,20 +167,23 @@
     await new Promise((r) => setTimeout(r, 30));
   }
 
-  // --- 5. Scroll Driver (Optimized paint settle) ---
-  async function scrollToPosition(targetX, targetY, delayMs = 70) {
+  // --- 5. Scroll Driver (Optimized paint settle for slow processors & heavy DOMs) ---
+  async function scrollToPosition(targetX, targetY, delayMs = 180) {
     return new Promise((resolve) => {
       window.scrollTo({ left: targetX, top: targetY, behavior: 'instant' });
+      // Double RAF ensures both layout recalculation and paint compositor commit before snapshotting
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          const actualX = window.scrollX || window.pageXOffset || 0;
-          const actualY = window.scrollY || window.pageYOffset || 0;
-          resolve({
-            actualX,
-            actualY,
-            reachedTarget: Math.abs(actualY - targetY) < 3,
-          });
-        }, delayMs);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const actualX = window.scrollX || window.pageXOffset || 0;
+            const actualY = window.scrollY || window.pageYOffset || 0;
+            resolve({
+              actualX,
+              actualY,
+              reachedTarget: Math.abs(actualY - targetY) < 3,
+            });
+          }, Math.max(160, delayMs));
+        });
       });
     });
   }

@@ -10,6 +10,7 @@ import { Toolbar } from './ui/toolbar.js';
 import { Inspector } from './ui/inspector.js';
 import { Toast } from './ui/toast.js';
 import { ExportSheet } from './ui/export-sheet.js';
+import { SettingsModal } from './ui/settings-modal.js';
 import { EmptyState } from './ui/empty-state.js';
 import { AutosaveService } from './services/autosave.js';
 import { BlobStore } from './services/blob-store.js';
@@ -46,6 +47,7 @@ class StudioApp {
     this.inspector = new Inspector(document.getElementById('inspector-mount'), store);
     this.toast = new Toast(document.getElementById('toast-mount'));
     this.exportSheet = new ExportSheet(document.getElementById('export-sheet-mount'), documentModel);
+    this.settingsModal = new SettingsModal(document.getElementById('settings-modal-mount'), store);
     this.emptyState = new EmptyState(document.getElementById('empty-state-mount'));
     this.autosave = new AutosaveService(documentModel);
 
@@ -141,8 +143,10 @@ class StudioApp {
       if (documentModel.annotations.length > 0 || documentModel.crop) {
         documentModel.annotations = [];
         documentModel.setCrop(null);
+        store.setSelectedObject(null);
+        eventBus.emit('document-changed');
         this.requestRender();
-        this.toast?.show('All markups cleared');
+        this.toast?.show('All markups cleared', { icon: 'check' });
       }
     });
     eventBus.on('open-export-sheet', () => {
@@ -269,6 +273,19 @@ class StudioApp {
     documentModel.setBaseImage(image, meta);
     this.emptyState.hide();
     this.transformWrapper.style.display = 'block';
+
+    // Trigger premium minimalist screenshot reveal entrance animation
+    this.transformWrapper.classList.remove('screenshot-enter-active');
+    void this.transformWrapper.offsetWidth;
+    this.transformWrapper.classList.add('screenshot-enter-active');
+    const onRevealEnd = () => {
+      this.transformWrapper.classList.remove('screenshot-enter-active');
+      this.transformWrapper.removeEventListener('animationend', onRevealEnd);
+    };
+    this.transformWrapper.addEventListener('animationend', onRevealEnd, { once: true });
+    setTimeout(() => {
+      this.transformWrapper.classList.remove('screenshot-enter-active');
+    }, 400);
 
     const updateDimensionsAndFit = () => {
       const rect = this.container.getBoundingClientRect();

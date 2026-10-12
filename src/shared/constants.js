@@ -5,8 +5,8 @@
 export const CAPTURE_LIMITS = {
   MAX_TOTAL_HEIGHT: 32000, // Maximum pixels before offering tiled downscale
   MAX_SLICES: 120,          // Safety ceiling on slice loop
-  MIN_SLICE_DELAY_MS: 160,  // Adaptive delay lower bound
-  MAX_SLICE_DELAY_MS: 750,  // Adaptive delay upper bound
+  MIN_SLICE_DELAY_MS: 560,  // Chrome quota is max 2 calls/sec (500ms min); 560ms gives safe buffer
+  MAX_SLICE_DELAY_MS: 1500, // Adaptive delay upper bound
   DEFAULT_SCROLL_DELAY_MS: 220,
   LAZY_LOAD_PRESCROLL_CHUNK: 800,
   SETTLE_NETWORK_TIMEOUT_MS: 1200,

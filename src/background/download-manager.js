@@ -6,6 +6,7 @@
 export class DownloadManager {
   static sanitizeFilename(name) {
     return name
+      .replace(/\.(png|jpg|jpeg|webp|pdf)$/i, '')
       .replace(/[\\/:*?"<>|]/g, '_')
       .replace(/\s+/g, '_')
       .substring(0, 100);

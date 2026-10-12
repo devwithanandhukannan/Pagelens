@@ -5,6 +5,7 @@
 import { ToolInterface } from './tool-interface.js';
 import { history } from '../core/history.js';
 import { AddShapeCommand } from '../core/commands/add-shape-command.js';
+import { eventBus } from '../core/event-bus.js';
 
 export class TextTool extends ToolInterface {
   constructor() {
@@ -13,24 +14,13 @@ export class TextTool extends ToolInterface {
 
   onPointerDown(e, point, store, docModel) {
     const { toolOptions } = store.getState();
-    const enteredText = prompt('Enter annotation text:', 'Note');
-    if (!enteredText || !enteredText.trim()) return;
 
-    const annotation = {
-      id: `text_${Date.now()}`,
-      type: 'text',
-      x: point.x,
-      y: point.y,
-      text: enteredText.trim(),
+    // Trigger in-app HUD prompt toast instead of browser native blocking prompt()
+    eventBus.emit('prompt-text-annotation', {
+      point,
       color: toolOptions.color || '#F8FAFC',
       fontSize: toolOptions.fontSize || 16,
-      width: 120,
-      height: 28,
-    };
-
-    history.execute(new AddShapeCommand(annotation));
-    store.setActiveTool('select');
-    store.setSelectedObject(annotation.id);
+    });
   }
 }
 

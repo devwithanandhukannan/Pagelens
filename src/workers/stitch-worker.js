@@ -39,27 +39,35 @@ export async function stitchSlices({ slices, totalWidth, totalHeight, dpr = 1 })
     })
   );
 
-  // 2. Blit all slices onto composite canvas
+  // 2. Blit all slices onto composite canvas seamlessly (GoFullPage stitching algorithm)
+  const sliceHeightPx = Math.round((slices[0]?.height || totalHeight) * dpr);
+
   for (let i = 0; i < slices.length; i++) {
-    const slice = slices[i];
     const imgBitmap = bitmaps[i];
     if (!imgBitmap) continue;
 
     const destX = 0;
-    const destY = Math.round(slice.y * dpr);
-    const sliceHeight = slice.height * dpr;
 
-    // For the last slice, crop bottom overlap if remaining height is less than viewport
-    if (i === slices.length - 1 && destY + sliceHeight > canvasHeight) {
-      const remainingHeight = canvasHeight - destY;
-      const sourceY = imgBitmap.height - remainingHeight;
-      ctx.drawImage(
-        imgBitmap,
-        0, Math.max(0, sourceY), imgBitmap.width, remainingHeight,
-        destX, destY, imgBitmap.width, remainingHeight
-      );
-    } else {
+    if (i < slices.length - 1) {
+      // Standard full slice
+      const destY = Math.round(i * sliceHeightPx);
       ctx.drawImage(imgBitmap, destX, destY);
+    } else if (slices.length === 1) {
+      // Single slice (page fits in viewport)
+      ctx.drawImage(imgBitmap, 0, 0, Math.min(imgBitmap.width, canvasWidth), Math.min(imgBitmap.height, canvasHeight));
+    } else {
+      // Last slice: crop only the non-overlapping bottom remainder to eliminate any duplicate seams
+      const filledY = Math.round((slices.length - 1) * sliceHeightPx);
+      const remainingHeight = Math.max(0, canvasHeight - filledY);
+      const sourceY = Math.max(0, imgBitmap.height - remainingHeight);
+
+      if (remainingHeight > 0) {
+        ctx.drawImage(
+          imgBitmap,
+          0, sourceY, imgBitmap.width, remainingHeight,
+          destX, filledY, imgBitmap.width, remainingHeight
+        );
+      }
     }
 
     // Immediately free GPU memory

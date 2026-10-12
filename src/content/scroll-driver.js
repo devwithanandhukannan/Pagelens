@@ -3,7 +3,7 @@
  * Drives smooth, verified viewport scrolls to designated targets.
  */
 
-export async function scrollToPosition(targetX, targetY, delayMs = 120) {
+export async function scrollToPosition(targetX, targetY, delayMs = 180) {
   return new Promise((resolve) => {
     // Force instantaneous scroll
     window.scrollTo({

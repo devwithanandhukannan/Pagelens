@@ -1,10 +1,11 @@
 /**
  * Pagelens — Capture Controller
  * Executes the state machine for visible and full-page captures.
+ * Implements strict rate-limit protection and exponential backoff retry for captureVisibleTab.
  */
 
 import { validateTab } from './tab-guard.js';
-import { CaptureScheduler } from './capture-scheduler.js';
+import { globalCaptureScheduler } from './capture-scheduler.js';
 import { SessionRegistry } from './session-registry.js';
 import { stitchSlices } from '../workers/stitch-worker.js';
 import { BlobStore } from '../shared/blob-store.js';
@@ -12,7 +13,51 @@ import { PagelensError, ERROR_CODES } from '../shared/error-types.js';
 
 export class CaptureController {
   constructor() {
-    this.scheduler = new CaptureScheduler();
+    this.scheduler = globalCaptureScheduler;
+  }
+
+  /**
+   * Resilient wrapper around chrome.tabs.captureVisibleTab
+   * Automatically handles Chrome's MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND quota (max 2 calls/sec)
+   * with throttling and adaptive exponential backoff.
+   */
+  async captureTabWithRetry(windowId, options = { format: 'png' }, maxRetries = 5) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Throttle to ensure safe interval since last screenshot call
+      await this.scheduler.throttle();
+
+      const result = await new Promise((resolve) => {
+        chrome.tabs.captureVisibleTab(windowId, options, (data) => {
+          if (chrome.runtime.lastError) {
+            resolve({ error: chrome.runtime.lastError.message });
+          } else {
+            resolve({ data });
+          }
+        });
+      });
+
+      if (!result.error) {
+        this.scheduler.recordSuccess();
+        return result.data;
+      }
+
+      const isRateLimit = result.error.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND') ||
+                          result.error.toLowerCase().includes('quota');
+
+      if (isRateLimit && attempt < maxRetries) {
+        this.scheduler.recordRateLimitError();
+        // Exponential backoff: 650ms, 1050ms, 1450ms...
+        const backoffMs = 650 + attempt * 400;
+        console.warn(`[Pagelens] Quota rate limit detected on captureVisibleTab. Backing off for ${backoffMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise((r) => setTimeout(r, backoffMs));
+        continue;
+      }
+
+      if (isRateLimit) {
+        throw new Error('Screenshot rate limit reached. Please wait a moment and try again.');
+      }
+      throw new Error(result.error);
+    }
   }
 
   async captureVisibleArea(tab) {
@@ -28,15 +73,7 @@ export class CaptureController {
     }
 
     try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (data) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(data);
-          }
-        });
-      });
+      const dataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
 
       // Save binary image in BlobStore (IndexedDB)
       try {
@@ -130,7 +167,7 @@ export class CaptureController {
             y: targetY,
             sliceIndex: i,
             totalSlices,
-            delayMs: 70,
+            delayMs: 180,
           }
         });
 
@@ -139,21 +176,8 @@ export class CaptureController {
           await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_HIDE_STICKY' });
         }
 
-        // Throttle to respect screenshot API limits
-        await this.scheduler.throttle();
-
-        // Capture visible slice
-        const sliceDataUrl = await new Promise((resolve, reject) => {
-          chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, (data) => {
-            if (chrome.runtime.lastError) {
-              this.scheduler.recordRateLimitError();
-              reject(new Error(chrome.runtime.lastError.message));
-            } else {
-              this.scheduler.recordSuccess();
-              resolve(data);
-            }
-          });
-        });
+        // Capture visible slice with resilient rate-limit throttling and backoff retry
+        const sliceDataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
 
         slices.push({
           index: i,

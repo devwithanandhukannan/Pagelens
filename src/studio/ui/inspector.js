@@ -1,10 +1,11 @@
 /**
  * Pagelens — Contextual Inspector UI Component
  * Floats contextually to offer immediate controls based on the selected tool or object.
- * Pure vector icons and smooth spring transitions.
+ * Pure vector icons, rich palette, and custom system color picker.
  */
 
 import { eventBus } from '../core/event-bus.js';
+import { documentModel } from '../core/document-model.js';
 
 export class Inspector {
   constructor(container, store) {
@@ -32,6 +33,15 @@ export class Inspector {
     }
 
     this.inspectorEl.classList.add('visible');
+
+    // If an object is selected, determine its current color
+    let activeColor = toolOptions.color || '#6D63E6';
+    if (selectedObjectId) {
+      const selectedObj = documentModel.getAnnotation(selectedObjectId);
+      if (selectedObj && selectedObj.color) {
+        activeColor = selectedObj.color;
+      }
+    }
 
     if (activeTool === 'crop') {
       this.inspectorEl.innerHTML = `
@@ -93,16 +103,16 @@ export class Inspector {
           </div>
         </div>
         <div class="toolbar-divider"></div>
-        ${this.renderColorGroup(toolOptions.color)}
+        ${this.renderColorGroup(activeColor)}
       `;
     } else {
       // General color & stroke options
       this.inspectorEl.innerHTML = `
-        ${this.renderColorGroup(toolOptions.color)}
+        ${this.renderColorGroup(activeColor)}
         <div class="toolbar-divider"></div>
         <div class="inspector-group">
           <span class="inspector-label">Size</span>
-          <input type="range" min="1" max="14" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" style="width: 70px; accent-color: var(--accent-violet);">
+          <input type="range" min="1" max="16" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" style="width: 70px; accent-color: var(--accent-violet);">
         </div>
       `;
     }
@@ -111,14 +121,22 @@ export class Inspector {
   }
 
   renderColorGroup(currentColor) {
-    const colors = ['#6D63E6', '#10B981', '#EF4444', '#F59E0B', '#3B82F6', '#FFFFFF', '#121317'];
+    const presetColors = ['#6D63E6', '#10B981', '#EF4444', '#F59E0B', '#3B82F6', '#EC4899', '#FFFFFF', '#121317'];
+    const isPreset = presetColors.some(c => c.toLowerCase() === (currentColor || '').toLowerCase());
+
     return `
       <div class="inspector-group">
         <span class="inspector-label">Color</span>
         <div class="color-swatch-list">
-          ${colors.map((c) => `
-            <div class="color-swatch ${c === currentColor ? 'active' : ''}" data-color="${c}" style="background-color: ${c};"></div>
+          ${presetColors.map((c) => `
+            <div class="color-swatch ${c.toLowerCase() === (currentColor || '').toLowerCase() ? 'active' : ''}" data-color="${c}" style="background-color: ${c};" title="${c}"></div>
           `).join('')}
+          
+          <!-- Universal Color Picker Swatch -->
+          <label class="color-swatch custom-color-picker-wrapper ${!isPreset ? 'active custom-active' : ''}" title="Choose custom color" style="${!isPreset ? `background-color: ${currentColor};` : ''}">
+            <input type="color" id="inspector-color-picker" class="custom-color-input" value="${currentColor || '#6D63E6'}" aria-label="Custom Color Picker" />
+            <svg class="picker-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          </label>
         </div>
       </div>
     `;
@@ -150,18 +168,43 @@ export class Inspector {
       });
     });
 
-    // Color swatch clicks
-    this.inspectorEl.querySelectorAll('.color-swatch').forEach((swatch) => {
+    // Preset color swatch clicks
+    this.inspectorEl.querySelectorAll('.color-swatch[data-color]').forEach((swatch) => {
       swatch.addEventListener('click', () => {
-        this.store.setToolOption('color', swatch.dataset.color);
+        const selectedColor = swatch.dataset.color;
+        this.store.setToolOption('color', selectedColor);
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { color: selectedColor });
+        }
       });
     });
+
+    // Custom Color Picker input
+    const colorPicker = this.inspectorEl.querySelector('#inspector-color-picker');
+    if (colorPicker) {
+      const handleColorChange = (e) => {
+        const newColor = e.target.value;
+        this.store.setToolOption('color', newColor);
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { color: newColor });
+        }
+      };
+      colorPicker.addEventListener('input', handleColorChange);
+      colorPicker.addEventListener('change', handleColorChange);
+    }
 
     // Stroke width slider
     const slider = this.inspectorEl.querySelector('#inspector-stroke-slider');
     if (slider) {
       slider.addEventListener('input', (e) => {
-        this.store.setToolOption('strokeWidth', parseInt(e.target.value, 10));
+        const width = parseInt(e.target.value, 10);
+        this.store.setToolOption('strokeWidth', width);
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { strokeWidth: width, fontSize: width * 4 });
+        }
       });
     }
   }

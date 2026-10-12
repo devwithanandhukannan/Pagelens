@@ -29,7 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
       visibleBtn.disabled = true;
     } else if (state.status === 'error') {
       statusContainer.style.display = 'block';
-      statusText.textContent = `Error: ${state.message}`;
+      let displayMsg = state.message;
+      if (displayMsg && (displayMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND') || displayMsg.includes('quota'))) {
+        displayMsg = 'Capture rate limit reached. Waiting a moment before retry...';
+      }
+      statusText.textContent = `Error: ${displayMsg}`;
       progressBar.style.backgroundColor = 'var(--accent-crimson)';
       fullPageBtn.disabled = false;
       visibleBtn.disabled = false;

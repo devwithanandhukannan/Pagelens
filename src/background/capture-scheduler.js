@@ -1,6 +1,7 @@
 /**
  * Pagelens — Capture Scheduler
  * Handles rate limits on chrome.tabs.captureVisibleTab with adaptive delays.
+ * Chrome strictly enforces MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND = 2 (minimum 500ms between calls).
  */
 
 import { CAPTURE_LIMITS } from '../shared/constants.js';
@@ -23,10 +24,10 @@ export class CaptureScheduler {
   }
 
   recordSuccess() {
-    // Gradually recover to minimum delay on consecutive successes
+    // Gradually recover towards minimum safe delay on consecutive successes
     this.currentDelay = Math.max(
       CAPTURE_LIMITS.MIN_SLICE_DELAY_MS,
-      Math.floor(this.currentDelay * 0.9)
+      Math.floor(this.currentDelay * 0.95)
     );
   }
 
@@ -34,7 +35,10 @@ export class CaptureScheduler {
     // Backoff adaptively if browser signals screenshot API rate limit
     this.currentDelay = Math.min(
       CAPTURE_LIMITS.MAX_SLICE_DELAY_MS,
-      Math.floor(this.currentDelay * 1.5) + 100
+      Math.max(750, Math.floor(this.currentDelay * 1.5))
     );
   }
 }
+
+// Global shared scheduler instance to rate-limit across all captures
+export const globalCaptureScheduler = new CaptureScheduler();

@@ -48,6 +48,11 @@ export class Toolbar {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
         </button>
 
+        <!-- Eraser Tool -->
+        <button class="tool-btn" data-tool="eraser" title="Eraser (E) — Click or drag to delete markup" aria-label="Eraser Tool">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+        </button>
+
         <div class="toolbar-divider"></div>
 
         <!-- Blur Tool -->
@@ -93,6 +98,7 @@ export class Toolbar {
         p: 'pen',
         h: 'highlighter',
         t: 'text',
+        e: 'eraser',
         b: 'blur',
         r: 'redact',
         s: 'stamp',
