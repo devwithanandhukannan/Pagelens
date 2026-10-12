@@ -140,20 +140,65 @@ body {
   color: var(--accent-violet);
 }
 
-/* Progress bar inside popup */
-.popup-progress-track {
-  width: 100%;
-  height: 4px;
+/* Segmented Progress Card (Matching GoFullPage / Image 2) */
+.popup-status-card {
   background: var(--surface-nested);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-  margin-top: 6px;
+  border: 1px solid var(--border-transparent);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.popup-progress-bar {
-  height: 100%;
-  width: 0%;
-  background: var(--accent-violet);
-  border-radius: var(--radius-pill);
-  transition: width 0.2s var(--ease-spring);
+.popup-hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.popup-hud-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.popup-hud-slice {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.popup-hud-segments {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.popup-seg-block {
+  flex: 1;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+[data-theme="porcelain"] .popup-seg-block {
+  background: #D1D5DB;
+}
+
+.popup-seg-block.filled {
+  background: #FFFFFF;
+}
+
+[data-theme="porcelain"] .popup-seg-block.filled {
+  background: #111827;
+}
+
+.popup-seg-block.active {
+  background: var(--accent-violet);
+  transform: scaleY(1.1);
+}
+

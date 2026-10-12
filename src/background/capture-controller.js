@@ -151,9 +151,13 @@ export class CaptureController {
       });
 
       // 4. Calculate slices and auto-scale settle delay
+      const isElementScroll = !!geom.isElementScroll;
       const viewportH = geom.viewportHeight;
       const totalH = geom.scrollHeight;
-      const totalSlices = Math.ceil(totalH / viewportH);
+      const scrollStep = isElementScroll ? (geom.scrollStep || viewportH) : viewportH;
+      const totalSlices = geom.totalSlices || Math.max(1, Math.ceil(totalH / scrollStep));
+      const topOffset = geom.topOffset || 0;
+      const bottomOffset = geom.bottomOffset || 0;
       const slices = [];
 
       // Determine intelligent adaptive settle delay (prevent browser crash / blank slices)
@@ -177,7 +181,9 @@ export class CaptureController {
           throw new PagelensError(ERROR_CODES.CAPTURE_CANCELLED, 'Capture cancelled by user.');
         }
 
-        const targetY = i * viewportH;
+        const targetY = isElementScroll
+          ? Math.min(Math.max(0, totalH - scrollStep), i * scrollStep)
+          : Math.min(Math.max(0, totalH - viewportH), i * viewportH);
 
         // Scroll to slice with adaptive settle delay
         const scrollRes = await chrome.tabs.sendMessage(tab.id, {
@@ -191,8 +197,22 @@ export class CaptureController {
           }
         });
 
-        // Hide sticky elements after the first slice is captured
-        if (i > 0) {
+        // Update toolbar action badge & popup progress
+        chrome.action.setBadgeText({ text: `${i + 1}/${totalSlices}`, tabId: tab.id }).catch(() => {});
+        chrome.action.setBadgeBackgroundColor({ color: '#6366F1' }).catch(() => {});
+
+        chrome.runtime.sendMessage({
+          type: 'PAGELENS_CAPTURE_PROGRESS',
+          payload: {
+            sliceIndex: i,
+            totalSlices,
+            text: `Capturing slice ${i + 1} of ${totalSlices}...`,
+            progress: Math.round(((i + 1) / totalSlices) * 100),
+          }
+        }).catch(() => {});
+
+        // Hide sticky elements after the first slice is captured (skip for SPAs with inner element scroll)
+        if (i > 0 && !isElementScroll) {
           await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_HIDE_STICKY' });
         }
 
@@ -201,17 +221,23 @@ export class CaptureController {
 
         slices.push({
           index: i,
-          y: scrollRes.actualY || targetY,
-          height: viewportH,
+          y: (scrollRes && scrollRes.actualY !== undefined) ? scrollRes.actualY : targetY,
+          height: isElementScroll ? scrollStep : viewportH,
           dataUrl: sliceDataUrl,
         });
       }
 
       // 5. Update progress: Stitching
-      await chrome.tabs.sendMessage(tab.id, {
-        type: 'PAGELENS_PROGRESS_UPDATE',
-        payload: { text: 'Stitching slices...' }
-      });
+      chrome.action.setBadgeText({ text: '...', tabId: tab.id }).catch(() => {});
+      chrome.runtime.sendMessage({
+        type: 'PAGELENS_CAPTURE_PROGRESS',
+        payload: {
+          sliceIndex: totalSlices - 1,
+          totalSlices,
+          text: 'Stitching slices...',
+          progress: 100,
+        }
+      }).catch(() => {});
 
       // 6. Stitch slices off the main thread
       const stitched = await stitchSlices({
@@ -219,6 +245,10 @@ export class CaptureController {
         totalWidth: geom.viewportWidth,
         totalHeight: geom.scrollHeight,
         dpr: geom.dpr,
+        isElementScroll,
+        topOffset,
+        bottomOffset,
+        scrollStep,
       });
 
       // 7. Restore page
@@ -233,6 +263,7 @@ export class CaptureController {
           width: stitched.width,
           height: stitched.height,
           type: 'full-page',
+          textBlocks: geom.textBlocks || [],
         });
       } catch (blobErr) {
         console.warn('[CaptureController] Failed to persist stitched blob in BlobStore:', blobErr);
@@ -249,6 +280,7 @@ export class CaptureController {
           height: stitched.height,
           timestamp: Date.now(),
           type: 'full-page',
+          textBlocks: geom.textBlocks || [],
         },
         pagelens_last_capture_id: sessionId,
       });
@@ -267,6 +299,7 @@ export class CaptureController {
       }
       throw err;
     } finally {
+      chrome.action.setBadgeText({ text: '', tabId: tab.id }).catch(() => {});
       await SessionRegistry.finishSession();
     }
   }

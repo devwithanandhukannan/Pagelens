@@ -17,6 +17,7 @@ import { FilesModal } from './ui/files-modal.js';
 import { AutosaveService } from './services/autosave.js';
 import { BlobStore } from './services/blob-store.js';
 import { ExportService } from './services/export-service.js';
+import { LiveTextOverlay } from './ui/live-text-overlay.js';
 
 import { store } from './core/store.js';
 import { eventBus } from './core/event-bus.js';
@@ -61,6 +62,9 @@ class StudioApp {
     this.ctx = this.canvas.getContext('2d');
     this.container = document.getElementById('studio-canvas-container');
     this.transformWrapper = document.getElementById('canvas-transform-wrapper');
+
+    // Apple Live Text OCR & Text Selection Engine
+    this.liveTextOverlay = new LiveTextOverlay(this.container, this.transformWrapper, documentModel);
 
     this.bindCanvasEvents();
     this.bindWindowEvents();
@@ -454,6 +458,7 @@ class StudioApp {
           url: record.url || '',
           tabId: record.tabId,
           type: record.type || 'full-page',
+          textBlocks: record.textBlocks || [],
           isExisting: true,
         };
         this.currentCaptureMeta = meta;
@@ -487,6 +492,7 @@ class StudioApp {
             url: data.url || '',
             tabId: data.tabId,
             type: data.type || 'full-page',
+            textBlocks: data.textBlocks || [],
             isExisting: true,
           };
           this.currentCaptureMeta = meta;
@@ -657,11 +663,36 @@ class StudioApp {
       sctx.fillText(row[3], 1020, ry);
     });
 
+    const sampleTextBlocks = [
+      { text: 'Pagelens Performance Analytics', x: 40, y: 36, width: 440, height: 32 },
+      { text: 'System Health: 99.98% Uptime', x: 920, y: 38, width: 240, height: 28 },
+      { text: 'Active Workers', x: 68, y: 154, width: 140, height: 20 },
+      { text: '12 Online', x: 68, y: 184, width: 110, height: 32 },
+      { text: 'Memory Usage', x: 448, y: 154, width: 140, height: 20 },
+      { text: '142 MB Normal', x: 448, y: 184, width: 160, height: 32 },
+      { text: 'Capture Latency', x: 828, y: 154, width: 150, height: 20 },
+      { text: '4.8 ms Turbo', x: 828, y: 184, width: 130, height: 32 },
+      { text: 'Throughput & Network Slices (24h Real-Time)', x: 68, y: 310, width: 380, height: 24 },
+      { text: 'Recent Production Deployments & Access Tokens', x: 68, y: 652, width: 410, height: 24 },
+      { text: 'user_john@acme.corp', x: 68, y: 700, width: 220, height: 22 },
+      { text: 'Admin Access', x: 320, y: 700, width: 140, height: 22 },
+      { text: 'JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', x: 520, y: 700, width: 390, height: 22 },
+      { text: 'Active', x: 1020, y: 700, width: 80, height: 22 },
+      { text: 'sarah_lead@fintech.io', x: 68, y: 746, width: 220, height: 22 },
+      { text: 'Billing Manager', x: 320, y: 746, width: 140, height: 22 },
+      { text: 'API Key: live_sec_9941829104812903', x: 520, y: 746, width: 340, height: 22 },
+      { text: 'alex_sec@defense.gov', x: 68, y: 792, width: 220, height: 22 },
+      { text: 'Auditor Role', x: 320, y: 792, width: 140, height: 22 },
+      { text: 'Credit Card: 4532-8819-2091-8841', x: 520, y: 792, width: 310, height: 22 },
+      { text: 'Restricted', x: 1020, y: 792, width: 90, height: 22 }
+    ];
+
     const sampleImg = new Image();
     sampleImg.onload = () => {
       this.setDocumentImage(sampleImg, {
         title: 'Current Screenshot',
         url: '',
+        textBlocks: sampleTextBlocks,
       });
       this.requestRender();
     };

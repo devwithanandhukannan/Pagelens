@@ -10,9 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const visibleBtn = document.getElementById('btn-capture-visible');
   const openStudioBtn = document.getElementById('btn-open-studio');
   const optionsLink = document.getElementById('link-options');
+  const welcomeLink = document.getElementById('link-welcome');
   const statusContainer = document.getElementById('popup-status-area');
   const statusText = document.getElementById('popup-status-text');
-  const progressBar = document.getElementById('popup-progress-bar');
+
+  if (welcomeLink) {
+    welcomeLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open('../welcome/welcome.html', '_blank');
+    });
+  }
 
   // Detect platform for shortcut badges
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -20,11 +27,27 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('shortcut-full').textContent = `${modKey}+SHIFT+S`;
   document.getElementById('shortcut-vis').textContent = `${modKey}+SHIFT+V`;
 
+  const updateSegments = (progressPct) => {
+    const blocks = document.querySelectorAll('.popup-seg-block');
+    if (!blocks || blocks.length === 0) return;
+    const ratio = Math.max(0, Math.min(100, progressPct)) / 100;
+    const count = Math.min(16, Math.max(1, Math.round(ratio * 16)));
+    blocks.forEach((b, idx) => {
+      if (idx < count - 1) {
+        b.className = 'popup-seg-block filled';
+      } else if (idx === count - 1) {
+        b.className = 'popup-seg-block active';
+      } else {
+        b.className = 'popup-seg-block';
+      }
+    });
+  };
+
   popupState.subscribe((state) => {
     if (state.status === 'capturing' || state.status === 'stitching') {
       statusContainer.style.display = 'block';
       statusText.textContent = state.message || 'Capturing...';
-      progressBar.style.width = `${state.progress}%`;
+      updateSegments(state.progress || 20);
       fullPageBtn.disabled = true;
       visibleBtn.disabled = true;
     } else if (state.status === 'error') {
@@ -34,11 +57,22 @@ document.addEventListener('DOMContentLoaded', () => {
         displayMsg = 'Capture rate limit reached. Waiting a moment before retry...';
       }
       statusText.textContent = `Error: ${displayMsg}`;
-      progressBar.style.backgroundColor = 'var(--accent-crimson)';
       fullPageBtn.disabled = false;
       visibleBtn.disabled = false;
     }
   });
+
+  // Listen to live progress broadcast from capture controller
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === 'PAGELENS_CAPTURE_PROGRESS' && msg.payload) {
+        const { text, progress } = msg.payload;
+        if (statusContainer) statusContainer.style.display = 'block';
+        if (statusText && text) statusText.textContent = text;
+        updateSegments(progress || 50);
+      }
+    });
+  }
 
   // 1. Capture Full Page
   fullPageBtn.addEventListener('click', async () => {

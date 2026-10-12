@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="obsidian">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Pagelens — Full Page Screen Capture & Privacy Studio</title>
+  <link rel="icon" type="image/png" href="../assets/icons/icon-32.png">
+  <link rel="stylesheet" href="./welcome.css">
+</head>
+<body>
+  <!-- Ambient Floating Confetti & Emoji Particles Container -->
+  <div class="particles-container" id="particles-container" aria-hidden="true"></div>
+
+  <!-- Browser Extension Installed Notification (Matching Chrome/Brave/Edge) -->
+  <div class="browser-install-notification" id="install-notification" role="status">
+    <div class="notification-icon-wrapper">
+      <img src="../assets/icons/icon-48.png" width="22" height="22" alt="Pagelens Logo">
+    </div>
+    <div class="notification-content">
+      <div class="notification-title">
+        <span class="notification-app-name">Pagelens</span> — Full Page Screen Capture has been added to your browser
+      </div>
+      <a href="#" class="notification-link" id="link-manage-shortcuts">Manage shortcuts</a>
+    </div>
+    <button class="notification-close-btn" id="btn-close-notification" aria-label="Dismiss notification">&times;</button>
+  </div>
+
+  <!-- Main Welcome Card Container -->
+  <main class="welcome-container" role="main">
+    <div class="welcome-card">
+      <!-- Card Header -->
+      <div class="welcome-header">
+        <div class="welcome-badge">
+          <span class="badge-emoji">🎉</span>
+          <span class="badge-text">Welcome to Pagelens</span>
+        </div>
+        <h1 class="welcome-title">Capture everything.<br><span class="gradient-text">Share only what you mean to.</span></h1>
+        <p class="welcome-subtitle">The Apple-grade full page screenshot & privacy editing studio right inside your browser.</p>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <!-- Step 1: One-Click Capture -->
+      <div class="welcome-step">
+        <div class="step-icon-col">
+          <div class="step-icon-bubble">📸</div>
+        </div>
+        <div class="step-content">
+          <h2 class="step-title">Instant Full-Page Screenshots</h2>
+          <p class="step-desc">
+            Take a screenshot of an entire web page in just one click of the Pagelens icon in the top right of your browser toolbar.
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 2: Pin the Extension (Interactive Simulation) -->
+      <div class="welcome-step">
+        <div class="step-icon-col">
+          <div class="step-icon-bubble">🧩</div>
+        </div>
+        <div class="step-content">
+          <h2 class="step-title">Pin Pagelens for Quick Access</h2>
+          <p class="step-desc">
+            If you don't see the Pagelens icon, click the <strong>Extensions</strong> puzzle icon in the top right of your browser: <span class="inline-badge">🧩</span>
+          </p>
+          <div class="pin-simulation-box" id="pin-simulation-box">
+            <div class="pin-sim-row">
+              <div class="pin-sim-left">
+                <img src="../assets/icons/icon-32.png" width="18" height="18" alt="Pagelens" class="pin-sim-icon">
+                <span class="pin-sim-name">Pagelens — Screen Capture</span>
+              </div>
+              <button class="pin-sim-btn" id="pin-sim-toggle" title="Click to test pinning!">
+                <span class="pin-icon" id="pin-sim-icon">📌</span>
+                <span class="pin-status-text" id="pin-sim-status">Click to pin</span>
+              </button>
+            </div>
+            <div class="pin-sim-hint">
+              Click the pin next to <strong>Pagelens</strong> so it turns blue: <span class="pin-blue-hint">📌 Blue</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Keyboard Shortcuts Cheatsheet -->
+      <div class="welcome-step">
+        <div class="step-icon-col">
+          <div class="step-icon-bubble">⚡</div>
+        </div>
+        <div class="step-content">
+          <h2 class="step-title">Keyboard Shortcuts</h2>
+          <p class="step-desc">Trigger captures from anywhere on any page instantly:</p>
+          <div class="shortcuts-grid">
+            <div class="shortcut-item">
+              <span class="shortcut-label">Full Page Capture</span>
+              <div class="shortcut-keys" id="shortcut-full-display">
+                <kbd class="key-cap">Alt</kbd> + <kbd class="key-cap">Shift</kbd> + <kbd class="key-cap">S</kbd>
+              </div>
+            </div>
+            <div class="shortcut-item">
+              <span class="shortcut-label">Visible Area</span>
+              <div class="shortcut-keys" id="shortcut-vis-display">
+                <kbd class="key-cap">Alt</kbd> + <kbd class="key-cap">Shift</kbd> + <kbd class="key-cap">V</kbd>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-divider"></div>
+
+      <!-- Step 4: Next Actions & Playground -->
+      <div class="welcome-actions">
+        <button class="btn-primary-action spring-btn" id="btn-open-studio-test">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Open Studio & Try Sample Capture</span>
+        </button>
+        <button class="btn-secondary-action spring-btn" id="btn-open-settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Preferences & Formats</span>
+        </button>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="welcome-footer">
+        <span class="footer-note">For additional support, shortcuts, or help:</span>
+        <div class="footer-links">
+          <a href="#" class="footer-link" id="link-shortcuts-help">Keyboard Shortcuts Guide</a>
+          <span class="footer-dot">•</span>
+          <a href="#" class="footer-link" id="link-privacy-info">Zero-Cloud Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="./welcome.js"></script>
+</body>
+</html>

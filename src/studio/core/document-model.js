@@ -27,6 +27,7 @@ export class DocumentModel {
     this.captureType = meta.type || meta.captureType || this.captureType || 'full-page';
     this.sessionId = meta.sessionId || this.sessionId;
     this.timestamp = meta.timestamp || Date.now();
+    this.textBlocks = meta.textBlocks || [];
     this.crop = null;
     this.annotations = [];
     eventBus.emit('document-loaded', this);

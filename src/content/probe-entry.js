@@ -17,10 +17,164 @@
   let originalScrollPosition = { x: 0, y: 0 };
   let isGuarded = false;
 
-  // --- 1. Page Measurer ---
+  let primaryScrollElement = null;
+  let originalElementScrollTop = 0;
+
+  // --- 1. Primary Scroll Container Detector (WhatsApp Web, Claude, SPAs) ---
+  // --- 1. Primary Scroll Container Detector (WhatsApp Web, Claude, SPAs) ---
+  function isWindowScrollable() {
+    const doc = document.documentElement;
+    const body = document.body;
+    const winHeight = window.innerHeight || doc.clientHeight;
+    const docScrollHeight = Math.max(
+      body ? body.scrollHeight : 0,
+      doc ? doc.scrollHeight : 0,
+      body ? body.offsetHeight : 0,
+      doc ? doc.offsetHeight : 0
+    );
+
+    if (docScrollHeight <= winHeight + 30) return false;
+
+    const htmlStyle = window.getComputedStyle(doc);
+    const bodyStyle = body ? window.getComputedStyle(body) : null;
+    if (htmlStyle.overflowY === 'hidden' || htmlStyle.overflowY === 'clip') return false;
+    if (bodyStyle && (bodyStyle.overflowY === 'hidden' || bodyStyle.overflowY === 'clip')) return false;
+
+    // Test actual scrolling capability
+    const initialY = window.scrollY || window.pageYOffset || 0;
+    if (initialY > 0) return true;
+
+    window.scrollBy(0, 2);
+    const newY = window.scrollY || window.pageYOffset || 0;
+    if (newY > 0) {
+      window.scrollTo(0, initialY);
+      return true;
+    }
+
+    return false;
+  }
+
+  function findPrimaryScrollContainer() {
+    // If the window itself can scroll normally, no container override needed
+    if (isWindowScrollable()) {
+      return null;
+    }
+
+    const doc = document.documentElement;
+    const winHeight = window.innerHeight || doc.clientHeight;
+    const winWidth = window.innerWidth || doc.clientWidth;
+
+    // Window does not scroll or is overflow:hidden (WhatsApp Web, Claude, ChatGPT, etc.)
+    const candidates = [];
+    const allElements = document.querySelectorAll('div, main, section, article, ul, ol, [role="main"], [role="region"], [role="feed"]');
+
+    for (const el of allElements) {
+      if (el.id && el.id.startsWith('pagelens-')) continue;
+      if (el.scrollHeight <= el.clientHeight + 40) continue;
+      if (el.clientHeight < winHeight * 0.25) continue;
+      if (el.clientWidth < winWidth * 0.18) continue;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      if (rect.bottom <= 0 || rect.top >= winHeight) continue;
+
+      const style = window.getComputedStyle(el);
+      const overflowY = style.overflowY;
+      if (overflowY !== 'auto' && overflowY !== 'scroll' && overflowY !== 'overlay') {
+        continue;
+      }
+
+      const visibleWidth = Math.min(rect.right, winWidth) - Math.max(rect.left, 0);
+      const visibleHeight = Math.min(rect.bottom, winHeight) - Math.max(rect.top, 0);
+      if (visibleWidth <= 0 || visibleHeight <= 0) continue;
+
+      const visibleArea = visibleWidth * visibleHeight;
+      const scrollExcess = el.scrollHeight - el.clientHeight;
+      const widthRatio = visibleWidth / winWidth;
+
+      let score = visibleArea * Math.log10(scrollExcess + 10);
+
+      // Boost wide reading/chat panes over narrow sidebars (WhatsApp conversation pane is ~70% width)
+      if (widthRatio >= 0.45) score *= 2.5;
+      if (widthRatio >= 0.6) score *= 1.8;
+
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'main' || el.getAttribute('role') === 'main') score *= 2.5;
+
+      // Active element bonus (or child/sibling of active input)
+      if (document.activeElement && (el.contains(document.activeElement) || el.parentElement?.contains(document.activeElement))) {
+        score *= 2.2;
+      }
+
+      // If user had already scrolled this element, strong signal of primary reading surface
+      if (el.scrollTop > 0) {
+        score *= 2.0;
+      }
+
+      // Check common chat/conversation attributes
+      const attrStr = ((el.getAttribute('data-testid') || '') + ' ' + (el.className || '') + ' ' + (el.id || '')).toLowerCase();
+      if (/chat|conversation|message|history|scroll|feed|stream|transcript/i.test(attrStr)) {
+        score *= 1.8;
+      }
+
+      candidates.push({
+        el,
+        score,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+        rect
+      });
+    }
+
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => b.score - a.score);
+      return candidates[0].el;
+    }
+
+    return null;
+  }
+
+  // --- 2. Page Measurer ---
   function measurePage() {
     const doc = document.documentElement;
     const body = document.body;
+    const viewportWidth = window.innerWidth || doc.clientWidth;
+    const viewportHeight = window.innerHeight || doc.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+
+    primaryScrollElement = findPrimaryScrollContainer();
+
+    if (primaryScrollElement) {
+      originalElementScrollTop = primaryScrollElement.scrollTop;
+
+      // Scroll to top of container to start capture from the very beginning
+      primaryScrollElement.scrollTop = 0;
+      primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+
+      const rect = primaryScrollElement.getBoundingClientRect();
+      const topOffset = Math.max(0, Math.round(rect.top));
+      const bottomOffset = Math.max(0, Math.round(viewportHeight - rect.bottom));
+      const scrollStep = Math.max(200, Math.round(rect.height));
+      const scrollHeight = primaryScrollElement.scrollHeight;
+      const totalSlices = Math.max(1, Math.ceil(scrollHeight / scrollStep));
+
+      return {
+        isElementScroll: true,
+        topOffset,
+        bottomOffset,
+        scrollStep,
+        scrollHeight,
+        scrollWidth: viewportWidth,
+        viewportWidth,
+        viewportHeight,
+        totalSlices,
+        dpr,
+        title: document.title || 'Untitled Page',
+        url: window.location.href,
+        scrollY: originalElementScrollTop,
+        scrollX: 0,
+      };
+    }
 
     const scrollHeight = Math.max(
       body.scrollHeight,
@@ -40,15 +194,16 @@
       doc.clientWidth
     );
 
-    const viewportWidth = window.innerWidth || doc.clientWidth;
-    const viewportHeight = window.innerHeight || doc.clientHeight;
-    const dpr = window.devicePixelRatio || 1;
-
     return {
+      isElementScroll: false,
+      topOffset: 0,
+      bottomOffset: 0,
+      scrollStep: viewportHeight,
       scrollHeight: Math.ceil(scrollHeight),
       scrollWidth: Math.ceil(scrollWidth),
       viewportWidth: Math.ceil(viewportWidth),
       viewportHeight: Math.ceil(viewportHeight),
+      totalSlices: Math.ceil(scrollHeight / viewportHeight),
       dpr,
       title: document.title || 'Untitled Page',
       url: window.location.href,
@@ -140,6 +295,23 @@
 
   // --- 4. Lazy-Load Primer ---
   async function primeLazyLoading(scrollHeight, chunkStep = 1400) {
+    if (primaryScrollElement) {
+      let currentY = 0;
+      while (currentY < scrollHeight) {
+        primaryScrollElement.scrollTop = currentY;
+        primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+        currentY += chunkStep;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      primaryScrollElement.scrollTop = scrollHeight;
+      primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 40));
+      primaryScrollElement.scrollTop = 0;
+      primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 40));
+      return;
+    }
+
     let currentY = 0;
     while (currentY < scrollHeight) {
       window.scrollTo({ left: 0, top: currentY, behavior: 'instant' });
@@ -170,17 +342,27 @@
   // --- 5. Scroll Driver (Optimized paint settle for slow processors & heavy DOMs) ---
   async function scrollToPosition(targetX, targetY, delayMs = 180) {
     return new Promise((resolve) => {
-      window.scrollTo({ left: targetX, top: targetY, behavior: 'instant' });
+      if (primaryScrollElement) {
+        primaryScrollElement.scrollTop = targetY;
+        primaryScrollElement.scrollLeft = targetX;
+        // Trigger React / virtualized list scroll listeners
+        primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+        primaryScrollElement.dispatchEvent(new UIEvent('scroll', { bubbles: true, cancelable: false, detail: 0 }));
+        window.dispatchEvent(new Event('scroll'));
+      } else {
+        window.scrollTo({ left: targetX, top: targetY, behavior: 'instant' });
+      }
+
       // Double RAF ensures both layout recalculation and paint compositor commit before snapshotting
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setTimeout(() => {
-            const actualX = window.scrollX || window.pageXOffset || 0;
-            const actualY = window.scrollY || window.pageYOffset || 0;
+            const actualX = primaryScrollElement ? primaryScrollElement.scrollLeft : (window.scrollX || window.pageXOffset || 0);
+            const actualY = primaryScrollElement ? primaryScrollElement.scrollTop : (window.scrollY || window.pageYOffset || 0);
             resolve({
               actualX,
               actualY,
-              reachedTarget: Math.abs(actualY - targetY) < 3,
+              reachedTarget: Math.abs(actualY - targetY) < 5,
             });
           }, Math.max(160, delayMs));
         });
@@ -188,23 +370,30 @@
     });
   }
 
-  // --- 6. HUD Overlay ---
-  // To ensure 100% pristine screenshots without any UI toast or progress badge baked
-  // into the captured image pixels, no DOM HUD element is injected into the document.
-  function showCaptureOverlay(_initialText) {
-    hideCaptureOverlay();
+  // --- 6. In-Page HUD Disabler (Zero-Artifact Capture Guarantee) ---
+  // In-page HUD overlay is disabled from DOM injection to guarantee captured screenshot pixels are 100% pristine.
+  // Progress is displayed exclusively in the Pagelens extension popup and browser action badge.
+  function removeCaptureOverlay() {
+    const hud = document.getElementById('pagelens-capture-hud');
+    if (hud && hud.parentNode) {
+      hud.parentNode.removeChild(hud);
+    }
+    const styles = document.getElementById('pagelens-hud-styles');
+    if (styles && styles.parentNode) {
+      styles.parentNode.removeChild(styles);
+    }
   }
 
-  function updateCaptureOverlay(_text) {
-    // In-page toast disabled so it never appears in screenshot pixels
+  function showCaptureOverlay(_initialText) {
+    removeCaptureOverlay();
+  }
+
+  function updateCaptureOverlay(_text, _sliceIndex, _totalSlices) {
+    // No-op: in-page overlay disabled to prevent baking into screenshot pixels
   }
 
   function hideCaptureOverlay() {
-    const existing = document.getElementById('pagelens-capture-hud');
-    if (existing && existing.parentNode) {
-      existing.parentNode.removeChild(existing);
-    }
-    overlayContainer = null;
+    removeCaptureOverlay();
   }
 
   // --- 7. Restore Guard ---
@@ -226,6 +415,10 @@
   function restorePage() {
     if (!isGuarded) return;
     try {
+      if (primaryScrollElement) {
+        primaryScrollElement.scrollTop = originalElementScrollTop;
+        primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
+      }
       window.scrollTo({
         left: originalScrollPosition.x,
         top: originalScrollPosition.y,
@@ -237,10 +430,42 @@
       window.removeEventListener('keydown', onKeyDownEscape, { capture: true });
     } finally {
       isGuarded = false;
+      primaryScrollElement = null;
     }
   }
 
-  // --- 8. Message Listener ---
+  // --- 8. Text Extraction for Apple Live Text ---
+  function extractPageTextBlocks() {
+    const blocks = [];
+    try {
+      const textSelectors = 'h1, h2, h3, h4, h5, h6, p, li, a, td, th, blockquote, code, pre, button, label, figcaption';
+      const nodes = document.querySelectorAll(textSelectors);
+      const scrollX = window.scrollX || window.pageXOffset || 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+
+      for (const node of nodes) {
+        if (blocks.length >= 250) break;
+        if (node.id && node.id.startsWith('pagelens-')) continue;
+        const text = node.innerText?.trim();
+        if (!text || text.length < 2) continue;
+        if (node.children.length > 3 && text.length > 200) continue;
+
+        const rect = node.getBoundingClientRect();
+        if (rect.width > 12 && rect.height > 8 && rect.bottom >= 0 && rect.top <= window.innerHeight * 10) {
+          blocks.push({
+            text: text.slice(0, 300),
+            x: Math.round(rect.left + scrollX),
+            y: Math.round(rect.top + scrollY),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+          });
+        }
+      }
+    } catch (_) {}
+    return blocks;
+  }
+
+  // --- 9. Message Listener ---
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       (async () => {
@@ -253,6 +478,7 @@
 
             case 'PAGELENS_MEASURE_PAGE': {
               const geom = measurePage();
+              geom.textBlocks = extractPageTextBlocks();
               initializeRestoreGuard(geom.scrollX, geom.scrollY);
               freezeMotion();
               findAndMarkStickyElements();
@@ -292,7 +518,24 @@
               break;
             }
 
+            case 'PAGELENS_HIDE_HUD': {
+              hideCaptureOverlay();
+              sendResponse({ success: true });
+              break;
+            }
+
+            case 'PAGELENS_SHOW_HUD': {
+              const { text, sliceIndex, totalSlices } = message.payload || {};
+              showCaptureOverlay(text);
+              if (sliceIndex !== undefined && totalSlices !== undefined) {
+                updateCaptureOverlay(text, sliceIndex, totalSlices);
+              }
+              sendResponse({ success: true });
+              break;
+            }
+
             case 'PAGELENS_RESTORE_PAGE': {
+              removeCaptureOverlay();
               restorePage();
               sendResponse({ success: true });
               break;

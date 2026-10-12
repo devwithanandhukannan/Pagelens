@@ -44,11 +44,29 @@
       </div>
     </button>
 
-    <!-- Status / Progress Card (hidden by default) -->
+    <!-- Status / Segmented Progress Card (Matching GoFullPage / Image 2) -->
     <div id="popup-status-area" style="display: none;" class="popup-status-card">
-      <div id="popup-status-text" style="font-size: 12px; font-weight: 500; color: var(--text-primary);">Preparing...</div>
-      <div class="popup-progress-track">
-        <div class="popup-progress-bar" id="popup-progress-bar"></div>
+      <div class="popup-hud-header">
+        <span class="popup-hud-title">Screen capture in progress...</span>
+        <span class="popup-hud-slice" id="popup-status-text">Preparing...</span>
+      </div>
+      <div class="popup-hud-segments" id="popup-hud-segments">
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
+        <span class="popup-seg-block"></span>
       </div>
     </div>
 
@@ -58,7 +76,11 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Ready to capture
       </span>
-      <a class="quiet-link" id="link-options">Settings</a>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a class="quiet-link" id="link-welcome" title="View Welcome & Shortcuts Guide">Guide</a>
+        <span style="color: var(--border-transparent); font-size: 10px;">•</span>
+        <a class="quiet-link" id="link-options">Settings</a>
+      </div>
     </div>
   </div>
 

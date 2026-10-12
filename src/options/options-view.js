@@ -104,6 +104,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  const navWelcome = document.getElementById('nav-welcome');
+  if (navWelcome) {
+    navWelcome.addEventListener('click', () => {
+      window.open('../welcome/welcome.html', '_blank');
+    });
+  }
+
   const chromeShortcutsBtn = document.getElementById('btn-open-chrome-shortcuts');
   if (chromeShortcutsBtn) {
     chromeShortcutsBtn.addEventListener('click', () => {

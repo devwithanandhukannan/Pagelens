@@ -85,9 +85,17 @@ export class TopBar {
             <svg class="edit-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </div>
 
-          <div class="doc-pill" id="doc-dimensions-pill" title="Image Dimensions">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
-            <span id="doc-dimensions-display">0 × 0 px</span>
+          <div class="topbar-meta-cluster">
+            <div class="doc-pill" id="doc-dimensions-pill" title="Image Dimensions">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+              <span id="doc-dimensions-display">0 × 0 px</span>
+            </div>
+
+            <!-- Navbar Canvas Zoom Indicator & Reset -->
+            <div class="doc-pill doc-zoom-pill" id="doc-zoom-pill" title="Canvas Zoom Level (Click to reset to 100%)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              <span id="doc-zoom-display">100%</span>
+            </div>
           </div>
         </div>
 
@@ -248,6 +256,27 @@ export class TopBar {
       if (dimEl) dimEl.textContent = `${doc.width.toLocaleString()} × ${doc.height.toLocaleString()} px`;
       this.updateDeleteButtonState();
     });
+
+    // Update zoom percentage display on top navbar
+    const zoomPill = document.getElementById('doc-zoom-pill');
+    const zoomDisplay = document.getElementById('doc-zoom-display');
+    const updateZoomDisplay = (vp) => {
+      if (zoomDisplay) {
+        const z = (vp && typeof vp.zoom === 'number') ? vp.zoom : (viewport.zoom || 1);
+        zoomDisplay.textContent = `${Math.round(z * 100)}%`;
+      }
+    };
+
+    updateZoomDisplay(viewport);
+    eventBus.on('viewport-changed', (vp) => updateZoomDisplay(vp));
+
+    if (zoomPill) {
+      zoomPill.addEventListener('click', () => {
+        viewport.resetZoom();
+        updateZoomDisplay(viewport);
+        eventBus.emit('show-toast', { message: 'Zoom reset to 100%', options: { icon: 'check', duration: 1500 } });
+      });
+    }
 
     // Listen for settings changes to update format badge
     eventBus.on('settings-changed', (newSettings) => {
