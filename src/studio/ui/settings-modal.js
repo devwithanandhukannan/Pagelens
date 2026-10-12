@@ -15,6 +15,9 @@ export class SettingsModal {
       theme: 'obsidian',
       autoOpen: true,
       captureDelay: 560,
+      saveHistory: true,
+      defaultSaveLocation: 'Desktop',
+      customFolder: '',
       defaultFormat: 'png',
       jpegQuality: 92,
       stripMeta: true,
@@ -66,6 +69,7 @@ export class SettingsModal {
   }
 
   render() {
+    const isCustom = this.settings.defaultSaveLocation === 'custom';
     this.container.innerHTML = `
       <div class="settings-modal-backdrop" id="settings-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         <div class="settings-modal-card">
@@ -80,7 +84,7 @@ export class SettingsModal {
               </div>
               <div>
                 <h2 class="settings-modal-title" id="settings-modal-title">Studio Settings</h2>
-                <span class="settings-modal-subtitle">Capture, export, theme & shortcut preferences</span>
+                <span class="settings-modal-subtitle">Capture, history, export & shortcut preferences</span>
               </div>
             </div>
             <button class="icon-btn spring-btn" id="settings-modal-close" aria-label="Close Settings">
@@ -117,9 +121,35 @@ export class SettingsModal {
               </div>
             </div>
 
-            <!-- Section 2: Capture Engine & Speed -->
+            <!-- Section 2: Screenshot History (10 captures retention) -->
             <div class="settings-group">
-              <span class="settings-group-heading">Capture Engine & Slow Processor Support</span>
+              <span class="settings-group-heading">Screenshot History (Last 10 Captures)</span>
+
+              <div class="settings-item-row">
+                <div class="settings-item-label">
+                  <strong>Save Previous Screenshots</strong>
+                  <span>Automatically retain up to 10 previous captures for instant switching</span>
+                </div>
+                <label class="apple-toggle">
+                  <input type="checkbox" id="settings-save-history" ${this.settings.saveHistory ? 'checked' : ''}>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="settings-item-row" style="background: transparent; border: none; padding: 4px 0;">
+                <div class="settings-item-label">
+                  <span style="font-size: 11.5px; color: var(--text-muted);">Manage or clear stored screenshots from local database</span>
+                </div>
+                <button type="button" class="spring-btn icon-btn" id="btn-clear-history-now" style="width: auto; height: 30px; padding: 0 12px; font-size: 11.5px; gap: 6px; color: var(--accent-crimson); border-color: rgba(239, 68, 68, 0.3);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                  Clear History
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 3: Capture Engine & Reliability -->
+            <div class="settings-group">
+              <span class="settings-group-heading">Capture Engine & Reliability</span>
 
               <div class="settings-item-row">
                 <div class="settings-item-label">
@@ -135,9 +165,31 @@ export class SettingsModal {
               </div>
             </div>
 
-            <!-- Section 3: Export Defaults -->
+            <!-- Section 4: Save Location & Export Defaults -->
             <div class="settings-group">
-              <span class="settings-group-heading">Export Defaults & Privacy</span>
+              <span class="settings-group-heading">Save Location & Export Defaults</span>
+
+              <div class="settings-item-row">
+                <div class="settings-item-label">
+                  <strong>Default Save Location</strong>
+                  <span>Directory where screenshots are downloaded (Desktop default or custom)</span>
+                </div>
+                <select id="settings-save-location" class="settings-select">
+                  <option value="Desktop" ${this.settings.defaultSaveLocation === 'Desktop' ? 'selected' : ''}>Desktop (Default)</option>
+                  <option value="Downloads" ${this.settings.defaultSaveLocation === 'Downloads' ? 'selected' : ''}>Downloads Root</option>
+                  <option value="Pagelens" ${this.settings.defaultSaveLocation === 'Pagelens' ? 'selected' : ''}>Downloads/Pagelens</option>
+                  <option value="custom" ${isCustom ? 'selected' : ''}>Custom Folder...</option>
+                </select>
+              </div>
+
+              <!-- Custom folder row -->
+              <div id="settings-custom-folder-row" class="settings-item-row" style="display: ${isCustom ? 'flex' : 'none'};">
+                <div class="settings-item-label">
+                  <strong>Custom Folder Name</strong>
+                  <span>Folder relative to user Downloads</span>
+                </div>
+                <input type="text" id="settings-custom-folder-input" class="settings-select" style="min-width: 160px;" value="${this.settings.customFolder || ''}" placeholder="e.g. MyScreenshots" />
+              </div>
 
               <div class="settings-item-row">
                 <div class="settings-item-label">
@@ -163,13 +215,21 @@ export class SettingsModal {
               </div>
             </div>
 
-            <!-- Section 4: Keyboard Shortcuts Quick Reference -->
+            <!-- Section 5: Keyboard Shortcuts Quick Reference -->
             <div class="settings-group">
               <span class="settings-group-heading">Keyboard Shortcuts</span>
               <div class="shortcuts-grid">
                 <div class="shortcut-pill-row">
                   <span>Eraser Tool</span>
                   <kbd>E</kbd>
+                </div>
+                <div class="shortcut-pill-row">
+                  <span>Emoji Stickers</span>
+                  <kbd>M</kbd>
+                </div>
+                <div class="shortcut-pill-row">
+                  <span>Recenter Canvas</span>
+                  <kbd>0</kbd>
                 </div>
                 <div class="shortcut-pill-row">
                   <span>Delete Selected / Clear</span>
@@ -190,10 +250,6 @@ export class SettingsModal {
                 <div class="shortcut-pill-row">
                   <span>Text Annotation</span>
                   <kbd>T</kbd>
-                </div>
-                <div class="shortcut-pill-row">
-                  <span>Crop Canvas</span>
-                  <kbd>C</kbd>
                 </div>
                 <div class="shortcut-pill-row">
                   <span>Undo / Redo</span>
@@ -279,6 +335,56 @@ export class SettingsModal {
     if (formatSelect) {
       formatSelect.addEventListener('change', () => {
         this.settings.defaultFormat = formatSelect.value;
+        this.saveSettings();
+      });
+    }
+
+    // Save History toggle (10 captures retention)
+    const saveHistoryInput = document.getElementById('settings-save-history');
+    if (saveHistoryInput) {
+      saveHistoryInput.addEventListener('change', () => {
+        this.settings.saveHistory = saveHistoryInput.checked;
+        this.saveSettings();
+        eventBus.emit('show-toast', {
+          message: this.settings.saveHistory ? 'Capture history enabled (saves last 10)' : 'Capture history disabled',
+          options: { icon: 'check', duration: 2000 }
+        });
+      });
+    }
+
+    // Clear history now button
+    const clearHistoryBtn = document.getElementById('btn-clear-history-now');
+    if (clearHistoryBtn) {
+      clearHistoryBtn.addEventListener('click', async () => {
+        try {
+          const { BlobStore } = await import('../services/blob-store.js');
+          await BlobStore.clearAllCaptures();
+          eventBus.emit('history-cleared');
+          eventBus.emit('show-toast', { message: 'Previous screenshot history cleared', options: { icon: 'check' } });
+        } catch (e) {
+          eventBus.emit('show-toast', { message: 'Failed to clear history' });
+        }
+      });
+    }
+
+    // Default Save Location select
+    const locationSelect = document.getElementById('settings-save-location');
+    const customRow = document.getElementById('settings-custom-folder-row');
+    const customInput = document.getElementById('settings-custom-folder-input');
+
+    if (locationSelect) {
+      locationSelect.addEventListener('change', () => {
+        this.settings.defaultSaveLocation = locationSelect.value;
+        if (customRow) {
+          customRow.style.display = locationSelect.value === 'custom' ? 'flex' : 'none';
+        }
+        this.saveSettings();
+      });
+    }
+
+    if (customInput) {
+      customInput.addEventListener('input', () => {
+        this.settings.customFolder = customInput.value.trim();
         this.saveSettings();
       });
     }

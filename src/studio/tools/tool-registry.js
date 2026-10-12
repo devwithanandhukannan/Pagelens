@@ -8,8 +8,9 @@ import { CropTool } from './crop-tool.js';
 import { ShapeTool } from './shape-tool.js';
 import { PenTool, HighlighterTool } from './pen-tool.js';
 import { TextTool, StampTool } from './text-tool.js';
-import { BlurTool, RedactTool } from './blur-tool.js';
+import { BlurTool } from './blur-tool.js';
 import { EraserTool } from './eraser-tool.js';
+import { EmojiTool } from './emoji-tool.js';
 
 export class ToolRegistry {
   constructor() {
@@ -22,9 +23,9 @@ export class ToolRegistry {
     this.register(new PenTool());
     this.register(new HighlighterTool());
     this.register(new TextTool());
+    this.register(new EmojiTool());
     this.register(new EraserTool());
     this.register(new BlurTool());
-    this.register(new RedactTool());
     this.register(new StampTool());
   }
 

@@ -22,12 +22,11 @@ export class Inspector {
       </div>
     `;
     this.inspectorEl = document.getElementById('pagelens-inspector');
-  }
-
-  update(state) {
+  }  update(state) {
     const { activeTool, toolOptions, selectedObjectId } = state;
 
-    if (activeTool === 'select' && !selectedObjectId) {
+    // Do not show color/size inspector for select without object or for eraser
+    if ((activeTool === 'select' && !selectedObjectId) || activeTool === 'eraser') {
       this.inspectorEl.classList.remove('visible');
       return;
     }
@@ -63,11 +62,25 @@ export class Inspector {
           </div>
         </div>
       `;
-    } else if (activeTool === 'redact') {
+    } else if (activeTool === 'emoji') {
+      const emojiList = ['😀', '🔥', '🚀', '❤️', '👍', '👎', '⚠️', '❌', '✅', '👀', '💯', '💡', '🐛', '🎯', '👏', '📌', '⭐️', '🎉', '💩', '🔒'];
+      const activeEmoji = toolOptions.emoji || '🔥';
+      const activeSize = toolOptions.emojiSize || 36;
       this.inspectorEl.innerHTML = `
-        <div class="inline-warning-banner" style="padding: 6px 12px; font-size: 11px; gap: 8px;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Solid fill permanent redaction — Irreversible on export
+        <div class="inspector-group">
+          <span class="inspector-label">Emoji</span>
+          <div class="emoji-picker-row" style="display: flex; gap: 4px; overflow-x: auto; max-width: 320px; padding: 2px;">
+            ${emojiList.map(e => `
+              <button class="spring-btn ${e === activeEmoji ? 'pill-badge' : 'icon-btn'}" data-emoji="${e}" style="width: 32px; height: 32px; font-size: 18px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="${e}">
+                ${e}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="inspector-group">
+          <span class="inspector-label">Size</span>
+          <input type="range" min="20" max="64" value="${activeSize}" id="inspector-emoji-size-slider" style="width: 70px; accent-color: var(--accent-violet);">
         </div>
       `;
     } else if (activeTool === 'blur') {
@@ -204,6 +217,35 @@ export class Inspector {
         const { selectedObjectId } = this.store.getState();
         if (selectedObjectId) {
           documentModel.updateAnnotation(selectedObjectId, { strokeWidth: width, fontSize: width * 4 });
+        }
+      });
+    }
+
+    // Emoji picker buttons
+    this.inspectorEl.querySelectorAll('[data-emoji]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const selectedEmoji = btn.dataset.emoji;
+        this.store.setToolOption('emoji', selectedEmoji);
+        this.inspectorEl.querySelectorAll('[data-emoji]').forEach((b) => {
+          b.classList.toggle('pill-badge', b.dataset.emoji === selectedEmoji);
+          b.classList.toggle('icon-btn', b.dataset.emoji !== selectedEmoji);
+        });
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { emoji: selectedEmoji });
+        }
+      });
+    });
+
+    // Emoji size slider
+    const emojiSlider = this.inspectorEl.querySelector('#inspector-emoji-size-slider');
+    if (emojiSlider) {
+      emojiSlider.addEventListener('input', (e) => {
+        const size = parseInt(e.target.value, 10);
+        this.store.setToolOption('emojiSize', size);
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { size, width: size, height: size });
         }
       });
     }

@@ -24,12 +24,21 @@ export class SelectTool extends ToolInterface {
     // Search top-to-bottom (reverse of draw order)
     for (let i = annotations.length - 1; i >= 0; i--) {
       const a = annotations[i];
-      const bounds = {
-        x: a.x - 4,
-        y: a.y - 4,
-        width: (a.width || 30) + 8,
-        height: (a.height || 30) + 8,
-      };
+      let bounds;
+      if (a.type === 'emoji') {
+        const s = a.size || 36;
+        bounds = { x: a.x - s / 2 - 6, y: a.y - s / 2 - 6, width: s + 12, height: s + 12 };
+      } else if (a.type === 'text' && a.align === 'center') {
+        const w = a.width || 60;
+        bounds = { x: a.x - w / 2 - 6, y: a.y - 6, width: w + 12, height: (a.height || 30) + 12 };
+      } else {
+        bounds = {
+          x: a.x - 4,
+          y: a.y - 4,
+          width: (a.width || 30) + 8,
+          height: (a.height || 30) + 8,
+        };
+      }
       if (pointInRect(point.x, point.y, bounds)) {
         hit = a;
         break;

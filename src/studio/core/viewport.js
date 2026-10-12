@@ -80,6 +80,17 @@ export class Viewport {
     eventBus.emit('viewport-changed', this);
   }
 
+  recenter(docWidth, docHeight) {
+    if (!docWidth || !docHeight || !this.containerWidth || !this.containerHeight) return;
+    this.panX = Math.round((this.containerWidth - docWidth * this.zoom) / 2);
+    if (docHeight * this.zoom > this.containerHeight) {
+      this.panY = 36;
+    } else {
+      this.panY = Math.round((this.containerHeight - docHeight * this.zoom) / 2);
+    }
+    eventBus.emit('viewport-changed', this);
+  }
+
   screenToCanvas(clientX, clientY, containerRect) {
     const localX = clientX - containerRect.left;
     const localY = clientY - containerRect.top;

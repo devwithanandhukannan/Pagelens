@@ -26,7 +26,9 @@ export const DEFAULT_SETTINGS = {
   jpegQuality: 0.92,
   autoOpenStudio: true,
   stripMetadata: true,
-  downloadDirectory: 'Pagelens',
+  saveHistory: true, // Retain last 10 screenshots by default
+  defaultSaveLocation: 'Desktop', // Default location: Desktop
+  downloadDirectory: 'Desktop',
   filenameTemplate: 'Pagelens_{page_title}_{date}_{time}',
   pdfPageSize: 'a4', // 'a4' | 'letter' | 'continuous'
   showShortcutsHint: true,

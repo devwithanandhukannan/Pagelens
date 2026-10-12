@@ -260,14 +260,16 @@ body {
 .doc-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
+  gap: 6px;
+  padding: 3px 8px;
   border-radius: 8px;
   background: transparent;
   border: 1px solid transparent;
   transition: all var(--duration-fast) var(--ease-spring);
   cursor: text;
-  max-width: 320px;
+  flex: 0 1 auto;
+  max-width: 560px;
+  min-width: 130px;
 }
 
 .doc-title-wrapper:hover {
@@ -289,8 +291,7 @@ body {
   letter-spacing: -0.01em;
   outline: none;
   width: 100%;
-  max-width: 240px;
-  text-overflow: ellipsis;
+  max-width: 500px;
   padding: 2px 4px;
   border-radius: 4px;
 }
@@ -889,10 +890,10 @@ canvas#pagelens-main-canvas {
   border: 1px solid var(--border-transparent);
 }
 
-/* Floating Glassmorphism HUD Undo Toast (Pill shape, spring animated from bottom) */
+/* Floating Glassmorphism HUD Notification Toast (Pill shape, centered below topbar, zero obstruction) */
 .hud-toast-container {
   position: fixed;
-  bottom: 32px;
+  top: 64px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1180,13 +1181,13 @@ canvas#pagelens-main-canvas {
   }
 
   .doc-title-wrapper {
-    max-width: 160px;
+    max-width: 280px;
     padding: 1px 4px;
   }
 
   .doc-title-input {
     font-size: 12px;
-    max-width: 130px;
+    max-width: 250px;
   }
 
   .zoom-controls-cluster {
@@ -1256,7 +1257,8 @@ canvas#pagelens-main-canvas {
   }
 
   .hud-toast-container {
-    bottom: max(72px, calc(env(safe-area-inset-bottom, 14px) + 56px));
+    top: 56px;
+    bottom: auto;
     width: calc(100vw - 32px);
     max-width: 360px;
   }

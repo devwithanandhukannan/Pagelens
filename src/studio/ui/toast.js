@@ -152,7 +152,7 @@ export class Toast {
     });
 
     // In-app Text Annotation Prompt Handler
-    eventBus.on('prompt-text-annotation', ({ point, color, fontSize }) => {
+    eventBus.on('prompt-text-annotation', ({ point, color, fontSize, align = 'center' }) => {
       this.showPromptToast({
         title: 'Enter annotation text:',
         defaultValue: 'Note',
@@ -162,17 +162,18 @@ export class Toast {
             type: 'text',
             x: point.x,
             y: point.y,
+            align,
             text: enteredText,
             color: color || '#F8FAFC',
-            fontSize: fontSize || 16,
-            width: Math.max(90, enteredText.length * 10),
-            height: 28,
+            fontSize: fontSize || 18,
+            width: Math.max(90, enteredText.length * 11),
+            height: 30,
           };
 
           history.execute(new AddShapeCommand(annotation));
           store.setActiveTool('select');
           store.setSelectedObject(annotation.id);
-          this.show('Text annotation added', { icon: 'check' });
+          this.show('Text annotation added on center', { icon: 'check' });
         },
       });
     });

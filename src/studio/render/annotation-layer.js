@@ -44,6 +44,10 @@ export class AnnotationLayer {
         case 'stamp':
           this.renderStamp(ctx, item);
           break;
+
+        case 'emoji':
+          this.renderEmoji(ctx, item);
+          break;
       }
 
       // Draw selection bounding box and handles if currently selected
@@ -246,6 +250,8 @@ export class AnnotationLayer {
     const fontSize = item.fontSize || 16;
     ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
     ctx.fillStyle = item.color || '#F8FAFC';
+    const isCenter = item.align === 'center';
+    ctx.textAlign = isCenter ? 'center' : 'left';
     ctx.textBaseline = 'top';
 
     const text = item.text || 'Text';
@@ -253,22 +259,23 @@ export class AnnotationLayer {
 
     // Soft backdrop capsule if configured
     if (item.showBackground !== false) {
-      const padding = 6;
+      const padding = 8;
       let maxLineWidth = 0;
       for (const line of lines) {
         maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
       }
       const totalTextH = lines.length * (fontSize * 1.3);
+      const bgX = isCenter ? item.x - maxLineWidth / 2 - padding : item.x - padding;
 
       ctx.save();
-      ctx.fillStyle = 'rgba(18, 19, 23, 0.85)';
+      ctx.fillStyle = 'rgba(18, 19, 23, 0.88)';
       const radius = 6;
       if (ctx.roundRect) {
         ctx.beginPath();
-        ctx.roundRect(item.x - padding, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2, radius);
+        ctx.roundRect(bgX, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2, radius);
         ctx.fill();
       } else {
-        ctx.fillRect(item.x - padding, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2);
+        ctx.fillRect(bgX, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2);
       }
       ctx.restore();
     }
@@ -276,6 +283,18 @@ export class AnnotationLayer {
     lines.forEach((line, i) => {
       ctx.fillText(line, item.x, item.y + i * (fontSize * 1.3));
     });
+  }
+
+  renderEmoji(ctx, item) {
+    const size = item.size || 36;
+    ctx.save();
+    ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(item.emoji || '🔥', item.x, item.y);
+    ctx.restore();
   }
 
   renderStamp(ctx, item) {
@@ -303,10 +322,20 @@ export class AnnotationLayer {
   }
 
   renderSelectionHandles(ctx, item) {
-    const x = item.x;
-    const y = item.y;
-    const w = item.width || 30;
-    const h = item.height || 30;
+    let x = item.x;
+    let y = item.y;
+    let w = item.width || 30;
+    let h = item.height || 30;
+
+    if (item.type === 'emoji') {
+      const s = item.size || 36;
+      x = item.x - s / 2;
+      y = item.y - s / 2;
+      w = s;
+      h = s;
+    } else if (item.type === 'text' && item.align === 'center') {
+      x = item.x - w / 2;
+    }
 
     ctx.save();
     ctx.strokeStyle = '#6D63E6';

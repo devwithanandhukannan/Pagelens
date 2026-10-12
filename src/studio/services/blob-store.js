@@ -68,7 +68,7 @@ export class BlobStore {
     });
   }
 
-  static async pruneOldCaptures(maxRetention = 12) {
+  static async pruneOldCaptures(maxRetention = 10) {
     try {
       const db = await this.openDB();
       const records = await new Promise((resolve) => {
@@ -90,6 +90,38 @@ export class BlobStore {
       }
     } catch (e) {
       // Non-critical background maintenance
+    }
+  }
+
+  static async getRecentCaptures(maxCount = 10) {
+    try {
+      const db = await this.openDB();
+      const records = await new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+      records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return records.slice(0, maxCount);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static async clearAllCaptures() {
+    try {
+      const db = await this.openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.clear();
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+      });
+    } catch (e) {
+      return false;
     }
   }
 }

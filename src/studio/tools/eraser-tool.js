@@ -103,11 +103,11 @@ export class EraserTool extends ToolInterface {
       return normDist <= 1.0;
     }
 
-    // 4. Stamps
-    if (a.type === 'stamp') {
+    // 4. Stamps & Emojis
+    if (a.type === 'stamp' || a.type === 'emoji') {
       const cx = a.x;
       const cy = a.y;
-      const stampRadius = 20 + r;
+      const stampRadius = (a.size ? a.size / 2 : 20) + r;
       return Math.hypot(pt.x - cx, pt.y - cy) <= stampRadius;
     }
 
