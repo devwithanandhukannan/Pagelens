@@ -157,6 +157,21 @@
       const scrollStep = Math.max(200, Math.round(rect.height));
       const scrollHeight = primaryScrollElement.scrollHeight;
       const totalSlices = Math.max(1, Math.ceil(scrollHeight / scrollStep));
+      const rectLeft = Math.max(0, Math.round(rect.left));
+      const rectWidth = Math.min(viewportWidth, Math.round(rect.width));
+
+      let bgColor = '#111b21';
+      try {
+        const bodyBg = window.getComputedStyle(document.body).backgroundColor;
+        if (bodyBg && bodyBg !== 'transparent' && bodyBg !== 'rgba(0, 0, 0, 0)') {
+          bgColor = bodyBg;
+        } else {
+          const docBg = window.getComputedStyle(document.documentElement).backgroundColor;
+          if (docBg && docBg !== 'transparent' && docBg !== 'rgba(0, 0, 0, 0)') {
+            bgColor = docBg;
+          }
+        }
+      } catch (_) {}
 
       return {
         isElementScroll: true,
@@ -169,6 +184,9 @@
         viewportHeight,
         totalSlices,
         dpr,
+        rectLeft,
+        rectWidth,
+        bgColor,
         title: document.title || 'Untitled Page',
         url: window.location.href,
         scrollY: originalElementScrollTop,

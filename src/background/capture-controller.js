@@ -249,6 +249,9 @@ export class CaptureController {
         topOffset,
         bottomOffset,
         scrollStep,
+        rectLeft: geom.rectLeft || 0,
+        rectWidth: geom.rectWidth || geom.viewportWidth,
+        bgColor: geom.bgColor || '#111b21',
       });
 
       // 7. Restore page

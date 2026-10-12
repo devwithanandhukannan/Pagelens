@@ -12,6 +12,9 @@ export async function stitchSlices({
   topOffset = 0,
   bottomOffset = 0,
   scrollStep = 0,
+  rectLeft = 0,
+  rectWidth = 0,
+  bgColor = '#111b21',
 }) {
   const canvasWidth = Math.round(totalWidth * dpr);
   const canvasHeight = isElementScroll
@@ -56,23 +59,50 @@ export async function stitchSlices({
     const topPx = Math.round(topOffset * dpr);
     const bottomPx = Math.round(bottomOffset * dpr);
     const stepPx = Math.round((scrollStep || slices[0]?.height || totalHeight) * dpr);
+    const isPartialWidth = rectWidth > 0 && rectWidth < (totalWidth - 30);
+    const colSx = Math.round(rectLeft * dpr);
+    const colSw = Math.round(rectWidth * dpr);
     let filledY = 0;
+    let sampledColor = bgColor || '#111b21';
 
     for (let i = 0; i < slices.length; i++) {
       const imgBitmap = bitmaps[i];
       if (!imgBitmap) continue;
 
       if (i === 0) {
-        // Slice 0: Draw top header + first slice content
+        // Slice 0: Draw top header + first slice content across full width
         const sourceH = Math.min(imgBitmap.height, topPx + stepPx);
         ctx.drawImage(imgBitmap, 0, 0, imgBitmap.width, sourceH, 0, 0, canvasWidth, sourceH);
         filledY = sourceH;
+
+        // Sample background color directly from the non-scrolling side to guarantee seamless fill
+        if (isPartialWidth) {
+          try {
+            const sampleX = rectLeft > 50
+              ? Math.round(20 * dpr)
+              : Math.min(canvasWidth - 10, Math.round((rectLeft + rectWidth + 30) * dpr));
+            const sampleY = Math.min(imgBitmap.height - 10, Math.max(10, Math.round((topOffset + 30) * dpr)));
+            const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+            if (pixel && pixel[3] > 0) {
+              sampledColor = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+            }
+          } catch (_) {}
+        }
       } else if (i < slices.length - 1) {
         // Intermediate slices: Draw only the newly scrolled container content (exclude duplicate top header)
         const sourceY = topPx;
         const sourceH = Math.min(stepPx, imgBitmap.height - sourceY);
         if (sourceH > 0) {
-          ctx.drawImage(imgBitmap, 0, sourceY, imgBitmap.width, sourceH, 0, filledY, canvasWidth, sourceH);
+          if (isPartialWidth) {
+            // Fill static background to prevent repeating static sidebars or placeholders ("Voice and video calling")
+            ctx.fillStyle = sampledColor;
+            ctx.fillRect(0, filledY, canvasWidth, sourceH);
+
+            // Draw only the column that actually scrolled
+            ctx.drawImage(imgBitmap, colSx, sourceY, colSw, sourceH, colSx, filledY, colSw, sourceH);
+          } else {
+            ctx.drawImage(imgBitmap, 0, sourceY, imgBitmap.width, sourceH, 0, filledY, canvasWidth, sourceH);
+          }
           filledY += sourceH;
         }
       } else {
@@ -80,7 +110,13 @@ export async function stitchSlices({
         const remainingContentH = Math.max(0, (topPx + Math.round(totalHeight * dpr)) - filledY);
         if (remainingContentH > 0) {
           const sourceContentY = Math.max(topPx, (topPx + stepPx) - remainingContentH);
-          ctx.drawImage(imgBitmap, 0, sourceContentY, imgBitmap.width, remainingContentH, 0, filledY, canvasWidth, remainingContentH);
+          if (isPartialWidth) {
+            ctx.fillStyle = sampledColor;
+            ctx.fillRect(0, filledY, canvasWidth, remainingContentH);
+            ctx.drawImage(imgBitmap, colSx, sourceContentY, colSw, remainingContentH, colSx, filledY, colSw, remainingContentH);
+          } else {
+            ctx.drawImage(imgBitmap, 0, sourceContentY, imgBitmap.width, remainingContentH, 0, filledY, canvasWidth, remainingContentH);
+          }
           filledY += remainingContentH;
         }
 
@@ -88,7 +124,13 @@ export async function stitchSlices({
         if (bottomPx > 0) {
           const sourceBottomY = Math.max(0, imgBitmap.height - bottomPx);
           const sourceBottomH = Math.min(bottomPx, imgBitmap.height - sourceBottomY);
-          ctx.drawImage(imgBitmap, 0, sourceBottomY, imgBitmap.width, sourceBottomH, 0, filledY, canvasWidth, sourceBottomH);
+          if (isPartialWidth) {
+            ctx.fillStyle = sampledColor;
+            ctx.fillRect(0, filledY, canvasWidth, sourceBottomH);
+            ctx.drawImage(imgBitmap, colSx, sourceBottomY, colSw, sourceBottomH, colSx, filledY, colSw, sourceBottomH);
+          } else {
+            ctx.drawImage(imgBitmap, 0, sourceBottomY, imgBitmap.width, sourceBottomH, 0, filledY, canvasWidth, sourceBottomH);
+          }
           filledY += sourceBottomH;
         }
       }
@@ -150,8 +192,32 @@ export async function stitchSlices({
 if (typeof DedicatedWorkerGlobalScope !== 'undefined' && self instanceof DedicatedWorkerGlobalScope) {
   self.onmessage = async (e) => {
     try {
-      const { slices, totalWidth, totalHeight, dpr, isElementScroll, topOffset, bottomOffset, scrollStep } = e.data;
-      const result = await stitchSlices({ slices, totalWidth, totalHeight, dpr, isElementScroll, topOffset, bottomOffset, scrollStep });
+      const {
+        slices,
+        totalWidth,
+        totalHeight,
+        dpr,
+        isElementScroll,
+        topOffset,
+        bottomOffset,
+        scrollStep,
+        rectLeft,
+        rectWidth,
+        bgColor,
+      } = e.data;
+      const result = await stitchSlices({
+        slices,
+        totalWidth,
+        totalHeight,
+        dpr,
+        isElementScroll,
+        topOffset,
+        bottomOffset,
+        scrollStep,
+        rectLeft,
+        rectWidth,
+        bgColor,
+      });
       self.postMessage({ success: true, ...result });
     } catch (err) {
       self.postMessage({ success: false, error: err.message });
