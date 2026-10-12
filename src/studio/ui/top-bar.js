@@ -92,21 +92,20 @@ export class TopBar {
         </div>
 
         <div class="topbar-right">
-          <!-- Primary Red Download Action Button (Displays format e.g. PNG / JPEG / PDF) -->
+          <!-- Primary Red Download Action Button: Arrow + Format Badge (e.g. ⬇ PNG) -->
           <div class="download-cluster">
-            <button class="action-btn primary spring-btn download-btn-red" id="topbar-download-btn" title="Download Screenshot">
-              <svg class="download-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <button class="action-btn primary spring-btn download-btn-red" id="topbar-download-btn" title="Download Screenshot" aria-label="Download Screenshot">
+              <svg class="download-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              <span class="download-label">Download</span>
               <span class="download-format-badge" id="topbar-format-badge">PNG</span>
             </button>
 
             <!-- Export Formats & Sharing Options Dropdown/Sheet Trigger -->
-            <button class="icon-btn spring-btn export-options-btn" id="topbar-export-options-btn" title="More Export Options (PDF, JPEG, Clipboard)" aria-label="More Export Options">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            <button class="icon-btn spring-btn export-options-btn" id="topbar-export-options-btn" title="Export Formats & Options (PDF, JPEG, Clipboard)" aria-label="Export Formats">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 /**
  * Pagelens — Contextual Inspector UI Component
  * Floats contextually to offer immediate controls based on the selected tool or object.
- * Pure vector icons, rich palette, and custom system color picker.
+ * Pure vector icons, rich compact palette, size scaler for shapes, and categorized emoji picker.
  */
 
 import { eventBus } from '../core/event-bus.js';
@@ -11,6 +11,8 @@ export class Inspector {
   constructor(container, store) {
     this.container = container;
     this.store = store;
+    this.isEmojiPickerOpen = false;
+    this.activeEmojiCategory = 'smileys';
     this.render();
     this.bindEvents();
   }
@@ -22,12 +24,15 @@ export class Inspector {
       </div>
     `;
     this.inspectorEl = document.getElementById('pagelens-inspector');
-  }  update(state) {
+  }
+
+  update(state) {
     const { activeTool, toolOptions, selectedObjectId } = state;
 
-    // Do not show color/size inspector for select without object or for eraser
+    // Do not show inspector for select without object or for eraser
     if ((activeTool === 'select' && !selectedObjectId) || activeTool === 'eraser') {
       this.inspectorEl.classList.remove('visible');
+      this.isEmojiPickerOpen = false;
       return;
     }
 
@@ -63,24 +68,43 @@ export class Inspector {
         </div>
       `;
     } else if (activeTool === 'emoji') {
-      const emojiList = ['😀', '🔥', '🚀', '❤️', '👍', '👎', '⚠️', '❌', '✅', '👀', '💯', '💡', '🐛', '🎯', '👏', '📌', '⭐️', '🎉', '💩', '🔒'];
+      const quickEmojis = ['😀', '🔥', '🚀', '❤️', '👍', '👎', '⚠️', '✅', '💡', '🎯'];
       const activeEmoji = toolOptions.emoji || '🔥';
       const activeSize = toolOptions.emojiSize || 36;
+
       this.inspectorEl.innerHTML = `
-        <div class="inspector-group">
+        <div class="inspector-group" style="position: relative;">
           <span class="inspector-label">Emoji</span>
-          <div class="emoji-picker-row" style="display: flex; gap: 4px; overflow-x: auto; max-width: 320px; padding: 2px;">
-            ${emojiList.map(e => `
-              <button class="spring-btn ${e === activeEmoji ? 'pill-badge' : 'icon-btn'}" data-emoji="${e}" style="width: 32px; height: 32px; font-size: 18px; padding: 0; display: inline-flex; align-items: center; justify-content: center;" title="${e}">
+          <div class="emoji-quick-row" style="display: flex; align-items: center; gap: 3px;">
+            ${quickEmojis.map(e => `
+              <button class="emoji-quick-btn ${e === activeEmoji ? 'active' : ''}" data-emoji="${e}" title="${e}">
                 ${e}
               </button>
             `).join('')}
+            <button class="emoji-more-btn spring-btn" id="btn-emoji-more" title="View all emojis">
+              <span>+ More</span>
+            </button>
+          </div>
+
+          <!-- Full Categorized Emoji Picker Popover -->
+          <div class="emoji-picker-popover" id="emoji-picker-popover" style="display: ${this.isEmojiPickerOpen ? 'flex' : 'none'};">
+            <div class="emoji-popover-tabs">
+              <button class="emoji-tab-btn ${this.activeEmojiCategory === 'smileys' ? 'active' : ''}" data-tab="smileys">Faces</button>
+              <button class="emoji-tab-btn ${this.activeEmojiCategory === 'gestures' ? 'active' : ''}" data-tab="gestures">Hands</button>
+              <button class="emoji-tab-btn ${this.activeEmojiCategory === 'symbols' ? 'active' : ''}" data-tab="symbols">Symbols</button>
+              <button class="emoji-tab-btn ${this.activeEmojiCategory === 'objects' ? 'active' : ''}" data-tab="objects">Objects</button>
+            </div>
+            <div class="emoji-popover-grid" id="emoji-popover-grid">
+              ${this.getCategoryEmojis(this.activeEmojiCategory).map(e => `
+                <button class="emoji-grid-item" data-emoji="${e}" title="${e}">${e}</button>
+              `).join('')}
+            </div>
           </div>
         </div>
         <div class="toolbar-divider"></div>
         <div class="inspector-group">
           <span class="inspector-label">Size</span>
-          <input type="range" min="20" max="64" value="${activeSize}" id="inspector-emoji-size-slider" style="width: 70px; accent-color: var(--accent-violet);">
+          <input type="range" min="20" max="64" value="${activeSize}" id="inspector-emoji-size-slider" class="inspector-mini-slider" style="width: 52px; accent-color: var(--accent-violet);">
         </div>
       `;
     } else if (activeTool === 'blur') {
@@ -117,6 +141,11 @@ export class Inspector {
         </div>
         <div class="toolbar-divider"></div>
         ${this.renderColorGroup(activeColor)}
+        <div class="toolbar-divider"></div>
+        <div class="inspector-group">
+          <span class="inspector-label">Size</span>
+          <input type="range" min="1" max="16" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" class="inspector-mini-slider" style="width: 52px; accent-color: var(--accent-violet);">
+        </div>
       `;
     } else {
       // General color & stroke options
@@ -125,12 +154,26 @@ export class Inspector {
         <div class="toolbar-divider"></div>
         <div class="inspector-group">
           <span class="inspector-label">Size</span>
-          <input type="range" min="1" max="16" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" style="width: 70px; accent-color: var(--accent-violet);">
+          <input type="range" min="1" max="16" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" class="inspector-mini-slider" style="width: 52px; accent-color: var(--accent-violet);">
         </div>
       `;
     }
 
     this.bindDynamicEvents();
+  }
+
+  getCategoryEmojis(category) {
+    switch (category) {
+      case 'smileys':
+        return ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','☺️','😊','😇','🙂','😉','😍','🥰','😘','😋','😛','😜','🤪','😎','🥳','🤩','🤔','🤫','🤭','🤗','😱','🥵','🥶','🥺','😢','😭','😤','🤯','💩','🤡','👻','👽','🤖'];
+      case 'gestures':
+        return ['👍','👎','👏','🙌','👐','🤲','🤝','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','💪','🦾','✍️','🙏','💅','👑'];
+      case 'symbols':
+        return ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','✅','❌','⭕️','🛑','⛔️','🚫','⚠️','🚨','❓','❗️','💯','♨️','💥','⚡️','✨','🌟','⭐️','💫','🌈'];
+      case 'objects':
+      default:
+        return ['🔥','🚀','💡','🐛','🎯','📌','📍','🏆','🥇','🎖','🎗','🎨','🎬','🎤','🎧','🎼','🎹','🎲','🎮','📱','💻','🖥','📷','📺','⏰','⏳','💰','💎','🔑','🔒','✉️','📦','🎉','🎈','🪄'];
+    }
   }
 
   renderColorGroup(currentColor) {
@@ -148,7 +191,7 @@ export class Inspector {
           <!-- Universal Color Picker Swatch -->
           <label class="color-swatch custom-color-picker-wrapper ${!isPreset ? 'active custom-active' : ''}" title="Choose custom color" style="${!isPreset ? `background-color: ${currentColor};` : ''}">
             <input type="color" id="inspector-color-picker" class="custom-color-input" value="${currentColor || '#6D63E6'}" aria-label="Custom Color Picker" />
-            <svg class="picker-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            <svg class="picker-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           </label>
         </div>
       </div>
@@ -157,6 +200,15 @@ export class Inspector {
 
   bindEvents() {
     this.store.subscribe((state) => this.update(state));
+
+    // Close emoji popover when clicking outside
+    document.addEventListener('click', (e) => {
+      if (this.isEmojiPickerOpen && !e.target.closest('#emoji-picker-popover') && !e.target.closest('#btn-emoji-more')) {
+        this.isEmojiPickerOpen = false;
+        const pop = document.getElementById('emoji-picker-popover');
+        if (pop) pop.style.display = 'none';
+      }
+    });
   }
 
   bindDynamicEvents() {
@@ -221,21 +273,42 @@ export class Inspector {
       });
     }
 
-    // Emoji picker buttons
-    this.inspectorEl.querySelectorAll('[data-emoji]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const selectedEmoji = btn.dataset.emoji;
-        this.store.setToolOption('emoji', selectedEmoji);
-        this.inspectorEl.querySelectorAll('[data-emoji]').forEach((b) => {
-          b.classList.toggle('pill-badge', b.dataset.emoji === selectedEmoji);
-          b.classList.toggle('icon-btn', b.dataset.emoji !== selectedEmoji);
-        });
-        const { selectedObjectId } = this.store.getState();
-        if (selectedObjectId) {
-          documentModel.updateAnnotation(selectedObjectId, { emoji: selectedEmoji });
+    // Emoji "+ More" button
+    const moreBtn = this.inspectorEl.querySelector('#btn-emoji-more');
+    const popover = this.inspectorEl.querySelector('#emoji-picker-popover');
+    if (moreBtn && popover) {
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.isEmojiPickerOpen = !this.isEmojiPickerOpen;
+        popover.style.display = this.isEmojiPickerOpen ? 'flex' : 'none';
+      });
+    }
+
+    // Emoji tabs
+    this.inspectorEl.querySelectorAll('.emoji-tab-btn').forEach((tabBtn) => {
+      tabBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.activeEmojiCategory = tabBtn.dataset.tab;
+        this.inspectorEl.querySelectorAll('.emoji-tab-btn').forEach(b => b.classList.toggle('active', b === tabBtn));
+        const grid = this.inspectorEl.querySelector('#emoji-popover-grid');
+        if (grid) {
+          grid.innerHTML = this.getCategoryEmojis(this.activeEmojiCategory).map(emoji => `
+            <button class="emoji-grid-item" data-emoji="${emoji}" title="${emoji}">${emoji}</button>
+          `).join('');
+          this.bindEmojiGridClicks();
         }
       });
     });
+
+    // Quick emoji buttons
+    this.inspectorEl.querySelectorAll('.emoji-quick-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const selectedEmoji = btn.dataset.emoji;
+        this.selectEmoji(selectedEmoji);
+      });
+    });
+
+    this.bindEmojiGridClicks();
 
     // Emoji size slider
     const emojiSlider = this.inspectorEl.querySelector('#inspector-emoji-size-slider');
@@ -248,6 +321,30 @@ export class Inspector {
           documentModel.updateAnnotation(selectedObjectId, { size, width: size, height: size });
         }
       });
+    }
+  }
+
+  bindEmojiGridClicks() {
+    this.inspectorEl.querySelectorAll('.emoji-grid-item').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const selectedEmoji = btn.dataset.emoji;
+        this.selectEmoji(selectedEmoji);
+        this.isEmojiPickerOpen = false;
+        const pop = document.getElementById('emoji-picker-popover');
+        if (pop) pop.style.display = 'none';
+      });
+    });
+  }
+
+  selectEmoji(selectedEmoji) {
+    this.store.setToolOption('emoji', selectedEmoji);
+    this.inspectorEl.querySelectorAll('.emoji-quick-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.emoji === selectedEmoji);
+    });
+    const { selectedObjectId } = this.store.getState();
+    if (selectedObjectId) {
+      documentModel.updateAnnotation(selectedObjectId, { emoji: selectedEmoji });
     }
   }
 }

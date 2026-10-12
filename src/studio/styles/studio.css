@@ -739,35 +739,37 @@ canvas#pagelens-main-canvas {
   box-shadow: 0 2px 10px rgba(109, 99, 230, 0.5);
 }
 
-/* Apple-style Color Swatches */
+/* Apple-style Color Swatches (Compact Sleek Circles) */
 .color-swatch-list {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
 }
 
 .color-swatch {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   border: 1.5px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: transform var(--duration-fast) var(--ease-spring), border-color var(--duration-fast) var(--ease-spring);
 }
 
 .color-swatch:hover {
-  transform: scale(1.15);
+  transform: scale(1.18);
 }
 
 .color-swatch.active {
   border: 2px solid #FFFFFF !important;
-  transform: scale(1.12) !important;
+  transform: scale(1.15) !important;
   box-shadow: 0 0 0 2px var(--accent-violet) !important;
 }
 
 /* Custom Universal Color Picker Swatch */
 .color-swatch.custom-color-picker-wrapper {
+  width: 17px;
+  height: 17px;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -799,9 +801,160 @@ canvas#pagelens-main-canvas {
 
 .custom-color-picker-wrapper.custom-active {
   border: 2px solid #FFFFFF !important;
-  transform: scale(1.12) !important;
+  transform: scale(1.15) !important;
   box-shadow: 0 0 0 2px var(--accent-violet) !important;
 }
+
+/* Compact Size Seeker Slider */
+.inspector-mini-slider {
+  width: 52px !important;
+  height: 4px !important;
+  accent-color: var(--accent-violet) !important;
+  cursor: pointer;
+}
+
+/* Redesigned Clean Emoji Picker UI */
+.emoji-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.emoji-quick-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 15px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.emoji-quick-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.14);
+}
+
+.emoji-quick-btn.active {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: var(--accent-violet);
+  transform: scale(1.14);
+}
+
+.emoji-more-btn {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--surface-nested);
+  color: var(--accent-violet);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.emoji-more-btn:hover {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: var(--accent-violet);
+  color: #FFFFFF;
+}
+
+/* Categorized Emoji Popover Modal */
+.emoji-picker-popover {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  background: rgba(18, 20, 26, 0.96);
+  backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+  padding: 10px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-theme="porcelain"] .emoji-picker-popover,
+[data-theme="light"] .emoji-picker-popover {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+.emoji-popover-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+[data-theme="porcelain"] .emoji-popover-tabs,
+[data-theme="light"] .emoji-popover-tabs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.emoji-tab-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.emoji-tab-btn.active {
+  background: var(--surface-nested);
+  color: var(--text-primary);
+}
+
+.emoji-popover-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.emoji-grid-item {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: all var(--duration-fast);
+}
+
+.emoji-grid-item:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: scale(1.2);
+}
+
+[data-theme="porcelain"] .emoji-grid-item:hover,
+[data-theme="light"] .emoji-grid-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 
 /* Apple-style Toggle Switch (42x24px pill with white round knob) */
 .apple-toggle {
@@ -1896,17 +2049,19 @@ canvas#pagelens-main-canvas {
 }
 
 /* ==========================================================================
-   Floating Right-Side Viewport Navigation Dock (Zoom, Recenter, Theme, Settings)
+   Floating Right-Side Viewport Navigation Dock (Row-by-Row Navigation)
    ========================================================================== */
 .studio-viewport-dock {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 5px 8px;
-  border-radius: var(--radius-pill);
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 18px;
   background: rgba(18, 20, 26, 0.94);
   backdrop-filter: blur(36px) saturate(190%);
   -webkit-backdrop-filter: blur(36px) saturate(190%);
@@ -1930,10 +2085,12 @@ canvas#pagelens-main-canvas {
     inset 0 1px 1px rgba(255, 255, 255, 0.9);
 }
 
-.dock-cluster {
+.dock-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  width: 100%;
 }
 
 .dock-btn {
@@ -1942,7 +2099,7 @@ canvas#pagelens-main-canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-pill);
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: #94A3B8;
@@ -1965,6 +2122,11 @@ canvas#pagelens-main-canvas {
   transform: translateY(-1px);
 }
 
+.dock-btn.active {
+  background: var(--accent-violet) !important;
+  color: #FFFFFF !important;
+}
+
 [data-theme="porcelain"] .dock-btn:hover,
 [data-theme="light"] .dock-btn:hover {
   background: rgba(0, 0, 0, 0.07);
@@ -1972,13 +2134,13 @@ canvas#pagelens-main-canvas {
 }
 
 .dock-zoom-label {
-  font-size: 12px;
+  font-size: 11px;
   font-family: var(--font-mono);
   font-weight: 700;
   color: #CBD5E1;
-  min-width: 42px;
+  min-width: 38px;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
 [data-theme="porcelain"] .dock-zoom-label,
@@ -1986,24 +2148,25 @@ canvas#pagelens-main-canvas {
   color: #0F172A;
 }
 
-.dock-divider {
-  width: 1px;
-  height: 18px;
+.dock-divider-h {
+  width: 82%;
+  height: 1px;
   background: rgba(255, 255, 255, 0.12);
-  margin: 0 3px;
+  margin: 2px 0;
 }
 
-[data-theme="porcelain"] .dock-divider,
-[data-theme="light"] .dock-divider {
-  background: rgba(0, 0, 0, 0.12);
+[data-theme="porcelain"] .dock-divider-h,
+[data-theme="light"] .dock-divider-h {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {
   .studio-viewport-dock {
     right: 12px;
+    top: auto;
     bottom: 74px;
-    padding: 4px 6px;
-    scale: 0.94;
+    transform: none;
+    scale: 0.92;
     transform-origin: bottom right;
   }
 }

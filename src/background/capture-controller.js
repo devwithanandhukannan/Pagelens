@@ -150,11 +150,27 @@ export class CaptureController {
         payload: { scrollHeight: geom.scrollHeight },
       });
 
-      // 4. Calculate slices
+      // 4. Calculate slices and auto-scale settle delay
       const viewportH = geom.viewportHeight;
       const totalH = geom.scrollHeight;
       const totalSlices = Math.ceil(totalH / viewportH);
       const slices = [];
+
+      // Determine intelligent adaptive settle delay (prevent browser crash / blank slices)
+      let configuredDelay = 560;
+      try {
+        const stored = await chrome.storage.local.get('pagelens_settings');
+        if (stored?.pagelens_settings?.captureDelay) {
+          configuredDelay = Number(stored.pagelens_settings.captureDelay) || 560;
+        }
+      } catch (_) {}
+
+      let effectiveDelay = configuredDelay;
+      if (totalSlices >= 14 || totalH >= 12000) {
+        effectiveDelay = Math.max(configuredDelay, 950);
+      } else if (totalSlices >= 7 || totalH >= 6000) {
+        effectiveDelay = Math.max(configuredDelay, 720);
+      }
 
       for (let i = 0; i < totalSlices; i++) {
         if (await SessionRegistry.isCancelled()) {
@@ -163,7 +179,7 @@ export class CaptureController {
 
         const targetY = i * viewportH;
 
-        // Scroll to slice
+        // Scroll to slice with adaptive settle delay
         const scrollRes = await chrome.tabs.sendMessage(tab.id, {
           type: 'PAGELENS_SCROLL_TO',
           payload: {
@@ -171,7 +187,7 @@ export class CaptureController {
             y: targetY,
             sliceIndex: i,
             totalSlices,
-            delayMs: 180,
+            delayMs: effectiveDelay,
           }
         });
 

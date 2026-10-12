@@ -295,16 +295,33 @@ class StudioApp {
 
   onWheel(e) {
     e.preventDefault();
+
+    // Normalize delta mode across trackpads and mouse wheels
+    let dx = e.deltaX;
+    let dy = e.deltaY;
+    if (e.deltaMode === 1) { // LINE mode (mouse wheel ticks)
+      dx *= 16;
+      dy *= 16;
+    } else if (e.deltaMode === 2) { // PAGE mode
+      dx *= 80;
+      dy *= 80;
+    }
+
     if (e.ctrlKey || e.metaKey) {
-      // Zoom centered on cursor
+      // Smooth, controlled zoom centered on cursor
       const containerRect = this.container.getBoundingClientRect();
       const originX = e.clientX - containerRect.left;
       const originY = e.clientY - containerRect.top;
-      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-      viewport.setZoom(viewport.zoom * zoomFactor, originX, originY);
+      const zoomFactor = Math.exp(-dy * 0.0025);
+      const clampedFactor = Math.max(0.85, Math.min(1.15, zoomFactor));
+      viewport.setZoom(viewport.zoom * clampedFactor, originX, originY);
     } else {
-      // Pan
-      viewport.panBy(-e.deltaX, -e.deltaY);
+      // Smooth, controllable pan with gentle damping and velocity cap
+      const damp = 0.65;
+      const maxDelta = 80;
+      const clampedDx = Math.max(-maxDelta, Math.min(maxDelta, dx)) * damp;
+      const clampedDy = Math.max(-maxDelta, Math.min(maxDelta, dy)) * damp;
+      viewport.panBy(-clampedDx, -clampedDy);
     }
   }
 
