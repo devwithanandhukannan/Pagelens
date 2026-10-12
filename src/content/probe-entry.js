@@ -452,7 +452,7 @@
     }
   }
 
-  // --- 8. Comprehensive Text & Number Extraction for Apple Live Text ---
+  // --- 8. Apple Live Text — Precise Per-Line Text & Number Extractor ---
   function extractPageTextBlocks(options = {}) {
     const { visibleOnly = false, dpr = window.devicePixelRatio || 1 } = options;
     const blocks = [];
@@ -462,69 +462,41 @@
       const viewW = window.innerWidth;
       const viewH = window.innerHeight;
 
-      // Select candidate elements that hold text, prices, badges, numbers, paragraphs
-      const candidateElements = document.querySelectorAll(
-        'span, div, p, a, b, strong, em, i, mark, small, time, label, button, li, td, th, h1, h2, h3, h4, h5, h6, dd, dt, figcaption, blockquote, code, pre, summary'
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: (node) => {
+            if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            let el = node.parentElement;
+            while (el) {
+              if (el.id && el.id.startsWith('pagelens-')) return NodeFilter.FILTER_REJECT;
+              if (el.classList && (el.classList.contains('pagelens-overlay') || el.classList.contains('pagelens-hud'))) return NodeFilter.FILTER_REJECT;
+              el = el.parentElement;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
       );
 
-      // Block-level tags that indicate layout containers (not leaf text units)
-      const blockContainerSelector = 'div, p, ul, ol, li, table, section, article, header, footer, aside, nav, h1, h2, h3, h4, h5, h6, blockquote, form, main';
+      const range = document.createRange();
+      const seenKeys = new Set();
 
-      const seenRects = new Set();
+      function addBlock(rect, rawText) {
+        if (!rect || rect.width < 6 || rect.height < 6) return;
+        const text = rawText.trim();
+        if (text.length < 1) return;
+        if (!/[0-9a-zA-Z\u00C0-\u024F\u0900-\u0D7F]/.test(text)) return;
 
-      for (const node of candidateElements) {
-        if (blocks.length >= 4000) break;
-        if (node.id && node.id.startsWith('pagelens-')) continue;
-        if (node.classList && (node.classList.contains('pagelens-overlay') || node.classList.contains('pagelens-hud'))) continue;
-
-        // Skip non-leaf elements: if an element contains block containers, let its children be collected instead
-        // (Unless it's a paragraph or heading which we want as a cohesive block)
-        const isBlockText = /^(P|H[1-6]|LI|BLOCKQUOTE|FIGCAPTION|TD|TH)$/i.test(node.tagName);
-        if (!isBlockText && node.querySelector(blockContainerSelector)) {
-          continue;
-        }
-
-        // If node is an inline child inside an already cohesive block (like span inside p or h1-h6),
-        // let the parent paragraph/heading represent the entire text block unless it's a link or button
-        if (!isBlockText && !/^(A|BUTTON)$/i.test(node.tagName)) {
-          const parentBlock = node.closest('p, h1, h2, h3, h4, h5, h6, blockquote, pre');
-          if (parentBlock && parentBlock !== node) {
-            continue;
-          }
-        }
-
-        // Extract visible text
-        const rawText = node.innerText || node.textContent || '';
-        const text = rawText.trim().replace(/\s+/g, ' ');
-        if (!text || text.length < 1) continue;
-
-        // Must contain at least one alphanumeric character (text, number, price digit)
-        if (!/[0-9a-zA-Z\u00C0-\u024F\u0900-\u0D7F]/.test(text)) continue;
-
-        // Check if element is rendered and visible
-        const rect = node.getBoundingClientRect();
-        if (rect.width < 6 || rect.height < 6) continue;
-
-        // In visibleOnly mode: must be within the current viewport
         if (visibleOnly) {
-          if (rect.bottom <= 0 || rect.top >= viewH || rect.right <= 0 || rect.left >= viewW) {
-            continue;
-          }
+          if (rect.bottom <= 0 || rect.top >= viewH || rect.right <= 0 || rect.left >= viewW) return;
         }
 
-        // Check computed styles
-        const style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-          continue;
-        }
-
-        // Compute coordinates scaled to canvas device pixels
-        let x, y, width, height;
+        let x, y;
         if (visibleOnly) {
           x = Math.round(rect.left * dpr);
           y = Math.round(rect.top * dpr);
         } else {
-          // Full page capture
           if (primaryScrollElement) {
             const containerRect = primaryScrollElement.getBoundingClientRect();
             x = Math.round((rect.left - containerRect.left + primaryScrollElement.scrollLeft) * dpr);
@@ -534,13 +506,12 @@
             y = Math.round((rect.top + scrollY) * dpr);
           }
         }
-        width = Math.round(rect.width * dpr);
-        height = Math.round(rect.height * dpr);
+        const width = Math.round(rect.width * dpr);
+        const height = Math.round(rect.height * dpr);
 
-        // Deduplication: avoid exact duplicate bounding boxes (within 4px tolerance)
-        const key = `${Math.round(x / 6)}_${Math.round(y / 6)}_${Math.round(width / 6)}_${Math.round(height / 6)}`;
-        if (seenRects.has(key)) continue;
-        seenRects.add(key);
+        const key = `${Math.round(x / 6)}_${Math.round(y / 6)}_${text.slice(0, 16)}`;
+        if (seenKeys.has(key)) return;
+        seenKeys.add(key);
 
         blocks.push({
           text: text.slice(0, 600),
@@ -548,10 +519,122 @@
           y,
           width,
           height,
-          dpr,
-          tag: node.tagName.toLowerCase()
+          dpr
         });
       }
+
+      let textNode;
+      while ((textNode = walker.nextNode())) {
+        if (blocks.length >= 6000) break;
+
+        const text = textNode.nodeValue;
+        if (!text || !text.trim()) continue;
+        if (!/[0-9a-zA-Z\u00C0-\u024F\u0900-\u0D7F]/.test(text)) continue;
+
+        const parent = textNode.parentElement;
+        if (!parent) continue;
+        try {
+          const style = window.getComputedStyle(parent);
+          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+        } catch (_) { continue; }
+
+        range.selectNodeContents(textNode);
+        const rects = range.getClientRects();
+        if (!rects || rects.length === 0) continue;
+
+        if (rects.length === 1) {
+          // Single-line text node: entire text matches this single rect
+          addBlock(rects[0], text);
+        } else {
+          // Multi-line text node: segment words by visual line using Range
+          const tokens = text.match(/\S+|\s+/g) || [text];
+          let lineTokens = [];
+          let lineBox = null;
+          let prevTop = null;
+          let offset = 0;
+
+          for (const token of tokens) {
+            const start = offset;
+            const end = offset + token.length;
+            offset = end;
+
+            if (!/\S/.test(token)) {
+              lineTokens.push(token);
+              continue;
+            }
+
+            try {
+              range.setStart(textNode, start);
+              range.setEnd(textNode, end);
+              const r = range.getBoundingClientRect();
+              if (r.width > 0 && r.height > 0) {
+                if (prevTop === null || Math.abs(r.top - prevTop) > Math.min(8, r.height * 0.45)) {
+                  // Line break detected
+                  if (lineTokens.length > 0 && lineBox) {
+                    addBlock(lineBox, lineTokens.join(''));
+                  }
+                  lineTokens = [token];
+                  prevTop = r.top;
+                  lineBox = {
+                    left: r.left,
+                    top: r.top,
+                    right: r.right,
+                    bottom: r.bottom,
+                    width: r.width,
+                    height: r.height
+                  };
+                } else {
+                  lineTokens.push(token);
+                  lineBox.left = Math.min(lineBox.left, r.left);
+                  lineBox.right = Math.max(lineBox.right, r.right);
+                  lineBox.top = Math.min(lineBox.top, r.top);
+                  lineBox.bottom = Math.max(lineBox.bottom, r.bottom);
+                  lineBox.width = lineBox.right - lineBox.left;
+                  lineBox.height = lineBox.bottom - lineBox.top;
+                }
+              } else {
+                lineTokens.push(token);
+              }
+            } catch (_) {
+              lineTokens.push(token);
+            }
+          }
+
+          if (lineTokens.length > 0 && lineBox) {
+            addBlock(lineBox, lineTokens.join(''));
+          }
+        }
+      }
+
+      // Sort by y, then x
+      blocks.sort((a, b) => a.y - b.y || a.x - b.x);
+
+      // Merge inline fragments on the exact same line
+      const merged = [];
+      let i = 0;
+      while (i < blocks.length) {
+        let cur = { ...blocks[i] };
+        let j = i + 1;
+        while (j < blocks.length) {
+          const next = blocks[j];
+          const yClose = Math.abs(next.y - cur.y) < Math.max(5, cur.height * 0.35);
+          const gap = next.x - (cur.x + cur.width);
+          // If on same line and overlapping or within 10px gap, merge them
+          if (yClose && gap >= -8 * dpr && gap < 12 * dpr) {
+            cur.text = cur.text + (gap > 2 * dpr ? ' ' : '') + next.text;
+            const newRight = Math.max(cur.x + cur.width, next.x + next.width);
+            cur.width = newRight - cur.x;
+            cur.height = Math.max(cur.height, next.height);
+            j++;
+          } else {
+            break;
+          }
+        }
+        merged.push(cur);
+        i = j;
+      }
+
+      return merged;
     } catch (err) {
       console.warn('[Pagelens] extractPageTextBlocks error:', err);
     }

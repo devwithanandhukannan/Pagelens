@@ -2192,111 +2192,118 @@ canvas#pagelens-main-canvas {
   transition: all var(--duration-fast) var(--ease-spring);
 }
 
-.live-text-toggle-btn:hover {
+/* ==========================================================================
+   Apple Live Text — Authentic Native UI (Matches macOS Sonoma & iOS)
+   ========================================================================== */
+
+/* 1. Floating Live Text Toggle Button at Bottom-Right */
+.live-text-toggle-btn {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 55;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 32, 0.85);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.live-text-toggle-btn:hover {
   transform: scale(1.06);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  background: rgba(40, 40, 44, 0.95);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
 .live-text-toggle-btn.active {
-  background: linear-gradient(135deg, #2563EB, #4F46E5);
+  background: #007AFF;
+  border: none;
   color: #FFFFFF;
-  border-color: rgba(147, 197, 253, 0.5);
-  box-shadow: 
-    0 0 20px rgba(59, 130, 246, 0.65), 
-    0 8px 24px rgba(37, 99, 235, 0.4), 
-    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 0 18px rgba(0, 122, 255, 0.55),
+    0 4px 14px rgba(0, 122, 255, 0.4);
+}
+
+.live-text-toggle-btn.active:hover {
+  background: #0071E3;
 }
 
 [data-theme="porcelain"] .live-text-toggle-btn,
 [data-theme="light"] .live-text-toggle-btn {
-  background: rgba(255, 255, 255, 0.96);
-  color: #334155;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1D1D1F;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-}
-
-[data-theme="porcelain"] .live-text-toggle-btn:hover,
-[data-theme="light"] .live-text-toggle-btn:hover {
-  color: #0F172A;
-  border-color: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 [data-theme="porcelain"] .live-text-toggle-btn.active,
 [data-theme="light"] .live-text-toggle-btn.active {
-  background: linear-gradient(135deg, #2563EB, #4F46E5);
+  background: #007AFF;
   color: #FFFFFF;
+  border: none;
 }
 
-/* Floating Actions Bar (Copy All) */
+/* 2. Floating Action Bar (Copy All) at Bottom-Left */
 .live-text-actions-bar {
   position: fixed;
-  left: 24px;
-  bottom: 24px;
-  z-index: 52;
+  left: 22px;
+  bottom: 22px;
+  z-index: 55;
   display: flex;
   align-items: center;
-  gap: 8px;
-  animation: slideUpFade 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideUpFade 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .live-text-copy-all-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 16px;
-  border-radius: 24px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: #FFFFFF;
-  background: rgba(18, 20, 26, 0.94);
-  backdrop-filter: blur(36px) saturate(190%);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  background: rgba(30, 30, 32, 0.88);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-spring);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
 .live-text-copy-all-btn:hover {
-  background: rgba(30, 34, 46, 0.98);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+  background: rgba(42, 42, 46, 0.96);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.live-text-copy-all-btn.copied {
+  background: #34C759;
+  border-color: #34C759;
+  color: #FFFFFF;
 }
 
 [data-theme="porcelain"] .live-text-copy-all-btn,
 [data-theme="light"] .live-text-copy-all-btn {
-  background: rgba(255, 255, 255, 0.96);
-  color: #0F172A;
+  background: rgba(255, 255, 255, 0.94);
+  color: #1D1D1F;
   border: 1px solid rgba(0, 0, 0, 0.14);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="porcelain"] .live-text-copy-all-btn:hover,
-[data-theme="light"] .live-text-copy-all-btn:hover {
-  background: #FFFFFF;
-  border-color: rgba(0, 0, 0, 0.24);
-}
-
-.live-text-count-badge {
-  background: rgba(59, 130, 246, 0.35);
-  color: #93C5FD;
-  border-radius: 12px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-
-[data-theme="porcelain"] .live-text-count-badge,
-[data-theme="light"] .live-text-count-badge {
-  background: rgba(37, 99, 235, 0.12);
-  color: #2563EB;
-}
-
-/* Canvas Synchronized Live Text Overlay */
+/* 3. Canvas Synchronized Live Text Overlay */
 .live-text-overlay {
   position: absolute;
   top: 0;
@@ -2310,68 +2317,127 @@ canvas#pagelens-main-canvas {
   display: block;
 }
 
-/* Interactive Apple Live Text Pill */
+/* Subtle dim veil over canvas when Live Text is active so white cards pop */
+.live-text-overlay.visible::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* 4. Apple Live Text — Crisp White Rounded Capsule (Matches Image 2) */
 .live-text-pill {
   position: absolute;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(255, 255, 255, 0.6) inset;
-  cursor: pointer;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 3px 8px rgba(0, 0, 0, 0.06);
+  cursor: text;
   pointer-events: auto;
   user-select: text;
-  display: flex;
+  -webkit-user-select: text;
+  display: inline-flex;
   align-items: center;
-  padding: 2px 6px;
-  overflow: hidden;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  padding: 1px 6px;
+  overflow: visible;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   z-index: 25;
 }
 
-.live-text-pill-multiline {
-  align-items: flex-start;
-  padding: 6px 10px;
-}
-
 .live-text-pill:hover {
-  background: #FFFFFF;
-  border-color: #3B82F6;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.28), 0 0 0 1.5px #3B82F6;
-  transform: translateY(-1px);
+  border-color: rgba(0, 122, 255, 0.4);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.18),
+    0 0 0 1.5px rgba(0, 122, 255, 0.35);
 }
 
 .live-text-pill.just-copied {
-  background: #ECFDF5 !important;
-  border-color: #10B981 !important;
-  box-shadow: 0 0 0 2px #10B981 !important;
-  transform: scale(1.02);
+  border-color: #34C759 !important;
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.45) !important;
 }
 
-.live-text-label {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  font-size: 12.5px;
+/* Native Apple Text Selection (Matches Image 2 lavender/blue selection) */
+.live-text-pill ::selection {
+  background: #B4D5FE;
+  color: #1D1D1F;
+}
+
+.live-text-pill::-moz-selection {
+  background: #B4D5FE;
+  color: #1D1D1F;
+}
+
+/* Text rendering inside Apple Live Text Capsule */
+.live-text-text {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   font-weight: 500;
-  color: #0F172A;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  user-select: text;
-  pointer-events: auto;
+  color: #1D1D1F;
   letter-spacing: -0.01em;
-  line-height: 1.35;
-}
-
-.live-text-pill-multiline .live-text-label {
+  line-height: 1.25;
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
 }
 
-.live-text-pill.just-copied .live-text-label {
-  color: #065F46 !important;
+/* Clickable Link rendering (Matches Image 2 blue links) */
+.live-text-link {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  font-weight: 500;
+  color: #0071E3;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+  transition: color 0.12s ease;
+}
+
+.live-text-link:hover {
+  color: #005BB5;
+}
+
+/* Sleek Apple-style "Copied ✓" micro-tag attached to pill */
+.live-text-copied-tag {
+  position: absolute;
+  right: -2px;
+  top: -16px;
+  background: #34C759;
+  color: #FFFFFF;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-size: 10px;
   font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: tagPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  z-index: 35;
+  white-space: nowrap;
+}
+
+@keyframes tagPop {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes slideUpFade {

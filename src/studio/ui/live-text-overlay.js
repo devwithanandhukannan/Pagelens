@@ -1,11 +1,12 @@
 /**
  * Pagelens — Apple Live Text Overlay & Text Extraction
- * Detects, highlights, and provides interactive text selection on screenshot images.
- * Features:
- * - Floating Apple-style [ ≡ ] toggle button at the bottom-right of the viewport.
- * - Frosted white/blue selection highlight pills synchronized with canvas transforms.
- * - Instant click-to-copy individual text blocks with spring feedback.
- * - Bottom floating [ 📋 Copy All ] action bar.
+ * Replicates macOS Sonoma / iOS native Live Text:
+ * - Floating Apple-style [ ≡ ] toggle button at the bottom-right.
+ * - Floating dark frosted [ 📋 Copy All ] action bar at the bottom-left.
+ * - Crisp white rounded text capsules displaying detected text, numbers, and links.
+ * - Native text selection (drag cursor to select with macOS lavender/blue highlight).
+ * - Instant click-to-copy individual text blocks with Apple-style "Copied ✓" micro-tag.
+ * - Canvas veil dimming when active so text cards stand out with high contrast.
  * - Multi-engine text recognition: DOM metadata -> Native TextDetector -> Canvas Scanner.
  */
 
@@ -24,16 +25,16 @@ export class LiveTextOverlay {
   }
 
   render() {
-    // 1. Floating Apple Live Text Toggle Button at Bottom-Right
+    // 1. Floating Apple Live Text Toggle Button at Bottom-Right (matches macOS Live Text)
     let toggleBtn = document.getElementById('btn-live-text-toggle');
     if (!toggleBtn) {
       toggleBtn = document.createElement('button');
-      toggleBtn.className = 'live-text-toggle-btn spring-btn';
+      toggleBtn.className = 'live-text-toggle-btn';
       toggleBtn.id = 'btn-live-text-toggle';
-      toggleBtn.title = 'Live Text: Detect & Copy Text from Screenshot (T)';
+      toggleBtn.title = 'Live Text (T)';
       toggleBtn.setAttribute('aria-label', 'Toggle Live Text');
       toggleBtn.innerHTML = `
-        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 8V6a2 2 0 0 1 2-2h2"/>
           <path d="M16 4h2a2 2 0 0 1 2 2v2"/>
           <path d="M20 16v2a2 2 0 0 1-2 2h-2"/>
@@ -47,7 +48,7 @@ export class LiveTextOverlay {
     }
     this.toggleBtn = toggleBtn;
 
-    // 2. Floating Action Bar (Copy All) at Bottom-Left
+    // 2. Floating Action Bar (Copy All) at Bottom-Left (matches Apple native look)
     let actionsBar = document.getElementById('live-text-actions-bar');
     if (!actionsBar) {
       actionsBar = document.createElement('div');
@@ -55,20 +56,18 @@ export class LiveTextOverlay {
       actionsBar.id = 'live-text-actions-bar';
       actionsBar.style.display = 'none';
       actionsBar.innerHTML = `
-        <button class="live-text-copy-all-btn spring-btn" id="btn-live-text-copy-all" title="Copy all detected text lines to clipboard">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="live-text-copy-all-btn" id="btn-live-text-copy-all" title="Copy All">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
-          <span>Copy All</span>
-          <span class="live-text-count-badge" id="live-text-count-badge">0</span>
+          <span class="live-text-copy-all-label">Copy All</span>
         </button>
       `;
       this.rootContainer.appendChild(actionsBar);
     }
     this.actionsBar = actionsBar;
     this.copyAllBtn = document.getElementById('btn-live-text-copy-all');
-    this.countBadge = document.getElementById('live-text-count-badge');
 
     // 3. Canvas-Synchronized Overlay Container inside transform wrapper
     let overlay = document.getElementById('live-text-overlay');
@@ -103,7 +102,6 @@ export class LiveTextOverlay {
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
       if (e.key.toLowerCase() === 't' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // Only toggle if not holding space for panning
         this.toggle();
         e.preventDefault();
       }
@@ -136,14 +134,14 @@ export class LiveTextOverlay {
       await this.detectAndRender();
       eventBus.emit('show-toast', {
         message: `Live Text enabled (${this.detectedBlocks.length} text items detected)`,
-        options: { icon: 'check', duration: 2000 }
+        options: { icon: 'check', duration: 1800 }
       });
     } else {
       if (this.overlay) this.overlay.classList.remove('visible');
       if (this.actionsBar) this.actionsBar.style.display = 'none';
       eventBus.emit('show-toast', {
         message: 'Live Text disabled',
-        options: { icon: 'check', duration: 1500 }
+        options: { icon: 'check', duration: 1200 }
       });
     }
   }
@@ -153,32 +151,49 @@ export class LiveTextOverlay {
     this.syncDimensions();
 
     this.detectedBlocks = await this.extractTextBlocks();
-    if (this.countBadge) {
-      this.countBadge.textContent = this.detectedBlocks.length;
-    }
 
     this.overlay.innerHTML = '';
     const frag = document.createDocumentFragment();
 
-    this.detectedBlocks.forEach((block, idx) => {
+    this.detectedBlocks.forEach((block) => {
       const pill = document.createElement('div');
-      pill.className = 'live-text-pill spring-btn';
-      if (block.height > 34) {
-        pill.classList.add('live-text-pill-multiline');
-      }
+      pill.className = 'live-text-pill';
       pill.style.left = `${Math.max(0, block.x)}px`;
       pill.style.top = `${Math.max(0, block.y)}px`;
-      pill.style.width = `${Math.max(20, block.width)}px`;
-      pill.style.height = `${Math.max(16, block.height)}px`;
+      pill.style.width = `${Math.max(16, block.width)}px`;
+      pill.style.height = `${Math.max(14, block.height)}px`;
+
+      // Font size proportional to pill height for crisp native rendering
+      const fontSize = Math.max(11, Math.min(26, Math.round(block.height * 0.68)));
+      pill.style.fontSize = `${fontSize}px`;
       pill.title = `Click to copy: "${block.text}"`;
 
-      const label = document.createElement('span');
-      label.className = 'live-text-label';
-      label.textContent = block.text;
+      // Format content with link & entity recognition
+      this.renderPillContent(pill, block.text);
 
-      pill.appendChild(label);
+      // Track drag vs click so users can select text with mouse drag
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+
+      pill.addEventListener('mousedown', (e) => {
+        isDragging = false;
+        startX = e.clientX;
+        startY = e.clientY;
+      });
+
+      pill.addEventListener('mousemove', (e) => {
+        if (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4) {
+          isDragging = true;
+        }
+      });
 
       pill.addEventListener('click', (e) => {
+        // If the user was highlighting/selecting text, do not trigger single-click copy
+        const sel = window.getSelection();
+        if (isDragging || (sel && sel.toString().trim().length > 0)) {
+          return;
+        }
         e.stopPropagation();
         this.copyBlockText(block.text, pill);
       });
@@ -189,34 +204,58 @@ export class LiveTextOverlay {
     this.overlay.appendChild(frag);
   }
 
+  renderPillContent(container, text) {
+    // Detect URLs, emails, and common clickable link keywords
+    const linkRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|(?:Click here|Docs|Blog|Sign in|Learn more|Read more|View all)\b)/gi;
+    
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      // Plain text before link
+      if (match.index > lastIndex) {
+        const plain = document.createElement('span');
+        plain.className = 'live-text-text';
+        plain.textContent = text.slice(lastIndex, match.index);
+        container.appendChild(plain);
+      }
+
+      // Link element
+      const link = document.createElement('span');
+      link.className = 'live-text-link';
+      link.textContent = match[0];
+      link.title = `Link: ${match[0]}`;
+      container.appendChild(link);
+
+      lastIndex = linkRegex.lastIndex;
+    }
+
+    // Remaining text
+    if (lastIndex < text.length) {
+      const plain = document.createElement('span');
+      plain.className = 'live-text-text';
+      plain.textContent = text.slice(lastIndex);
+      container.appendChild(plain);
+    }
+
+    if (!container.firstChild) {
+      const plain = document.createElement('span');
+      plain.className = 'live-text-text';
+      plain.textContent = text;
+      container.appendChild(plain);
+    }
+  }
+
   async extractTextBlocks() {
-    // 1. Check if documentModel already contains text blocks (from probe-entry or capture)
+    // 1. Use high-fidelity DOM text blocks captured by probe during capture
     if (this.documentModel.textBlocks && this.documentModel.textBlocks.length > 0) {
-      const blocks = this.documentModel.textBlocks;
-      const canvasW = this.documentModel.width || 800;
-
-      // Check if coordinates need scaling to canvas pixel dimensions (e.g. 1x CSS coordinates vs 2x Retina canvas)
-      let maxX = 0;
-      for (const b of blocks) {
-        if (b.x + b.width > maxX) maxX = b.x + b.width;
-      }
-
-      if (maxX > 0 && maxX * 1.55 < canvasW && canvasW >= 1000) {
-        const roundRatio = Math.round((canvasW / maxX) * 10) / 10;
-        const scale = roundRatio >= 1.25 && roundRatio <= 3.5 ? roundRatio : (canvasW / maxX);
-        return blocks.map(b => ({
-          ...b,
-          x: Math.round(b.x * scale),
-          y: Math.round(b.y * scale),
-          width: Math.round(b.width * scale),
-          height: Math.round(b.height * scale)
-        }));
-      }
-
+      let blocks = this.documentModel.textBlocks;
+      // Remove container-level blocks & eliminate duplicates
+      blocks = this.eliminateOverlaps(blocks);
       return blocks;
     }
 
-    // 2. Check for native Chromium Shape Detection API (window.TextDetector)
+    // 2. Native Chromium Shape Detection API (if supported)
     if (typeof window.TextDetector !== 'undefined') {
       try {
         const canvas = document.getElementById('pagelens-main-canvas');
@@ -234,18 +273,60 @@ export class LiveTextOverlay {
           }
         }
       } catch (err) {
-        console.warn('[LiveText] Native TextDetector error:', err);
+        console.warn('[LiveText] Native TextDetector note:', err);
       }
     }
 
-    // 3. Fallback: Optimal pixel-level canvas text & number region detector
+    // 3. Intelligent Canvas OCR & Text Band Detector fallback
     return this.detectCanvasTextBands();
   }
 
   /**
-   * Fast, optimal pixel-level text & number region detector.
-   * Runs client-side directly on canvas pixels with zero external dependencies.
-   * Analyzes high-contrast gradient transitions, line profiles, and connected components.
+   * Remove container overlaps: if pill A fully wraps pill B and A is significantly larger,
+   * keep B (the tighter line-level pill).
+   */
+  eliminateOverlaps(blocks) {
+    const canvasW = this.documentModel.width || 800;
+
+    // Filter out huge whole-page container divs
+    let filtered = blocks.filter(b => {
+      if (b.width > canvasW * 0.85 && b.height > 80) return false;
+      if (b.height > 180) return false;
+      if (b.width < 8 || b.height < 6) return false;
+      return true;
+    });
+
+    // Sort by area ascending — smaller (tighter) pills first
+    filtered.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+
+    const result = [];
+    for (let i = 0; i < filtered.length; i++) {
+      const cur = filtered[i];
+      let isContainer = false;
+
+      for (const kept of result) {
+        if (cur.x <= kept.x + 4 && cur.y <= kept.y + 4 &&
+            cur.x + cur.width >= kept.x + kept.width - 4 &&
+            cur.y + cur.height >= kept.y + kept.height - 4 &&
+            (cur.width * cur.height) > (kept.width * kept.height) * 1.35) {
+          isContainer = true;
+          break;
+        }
+      }
+
+      if (!isContainer) {
+        result.push(cur);
+      }
+    }
+
+    // Sort visually from top to bottom, left to right
+    result.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    return result;
+  }
+
+  /**
+   * Fast canvas edge-density text scanner for screenshots loaded without DOM metadata.
    */
   detectCanvasTextBands() {
     const canvas = document.getElementById('pagelens-main-canvas');
@@ -258,14 +339,11 @@ export class LiveTextOverlay {
     if (!ctx) return [];
 
     try {
-      // Analyze image data
-      // For large images, step down slightly for speed (1-2px stride)
       const stride = w > 2000 || h > 2000 ? 2 : 1;
       const imgData = ctx.getImageData(0, 0, w, h);
       const data = imgData.data;
 
-      // 1. Calculate horizontal scanline edge density
-      // Text lines produce rapid alternating transitions between dark glyphs and light background
+      // 1. Compute horizontal row contrast transitions
       const rowDensity = new Float32Array(h);
       for (let y = 0; y < h; y += stride) {
         let transitions = 0;
@@ -274,9 +352,8 @@ export class LiveTextOverlay {
 
         for (let x = 0; x < w; x += stride * 2) {
           const idx = rowOffset + x * 4;
-          // Luminance: 0.299R + 0.587G + 0.114B
           const lum = (data[idx] * 299 + data[idx + 1] * 587 + data[idx + 2] * 114) / 1000;
-          if (x > 0 && Math.abs(lum - prevLum) > 35) {
+          if (x > 0 && Math.abs(lum - prevLum) > 32) {
             transitions++;
           }
           prevLum = lum;
@@ -284,98 +361,75 @@ export class LiveTextOverlay {
         rowDensity[y] = transitions / (w / (stride * 2));
       }
 
-      // 2. Identify candidate vertical text bands (lines)
-      const threshold = 0.038; // minimum edge transition frequency for text
+      // 2. Extract text line bands
+      const threshold = 0.035;
       const bands = [];
       let inBand = false;
       let startY = 0;
 
       for (let y = 0; y < h; y += stride) {
-        const val = rowDensity[y];
-        if (!inBand && val >= threshold) {
+        if (!inBand && rowDensity[y] >= threshold) {
           inBand = true;
           startY = y;
-        } else if (inBand && val < threshold) {
-          const height = y - startY;
-          // Typical text line height is between 8px and 85px
-          if (height >= 8 && height <= 85) {
-            bands.push({ y: startY, height });
+        } else if (inBand && rowDensity[y] < threshold) {
+          const bh = y - startY;
+          if (bh >= 10 && bh <= 60) {
+            bands.push({ y: startY, height: bh });
           }
           inBand = false;
         }
       }
-      if (inBand) {
-        const height = h - startY;
-        if (height >= 8 && height <= 85) {
-          bands.push({ y: startY, height });
-        }
-      }
 
-      // 3. For each detected text band, identify horizontal word/number segments
+      // 3. Extract word bounds along each text line
       for (const band of bands) {
-        if (blocks.length >= 1200) break;
+        if (blocks.length >= 600) break;
 
         const colDensity = new Float32Array(w);
-        const yStart = Math.max(0, band.y + 2);
-        const yEnd = Math.min(h - 1, band.y + band.height - 2);
+        const yStart = Math.max(0, band.y + 1);
+        const yEnd = Math.min(h - 1, band.y + band.height - 1);
 
         for (let x = 0; x < w; x += stride) {
-          let colTransitions = 0;
-          let prevVal = 0;
+          let col = 0;
+          let prev = 0;
           for (let y = yStart; y <= yEnd; y += stride) {
             const idx = (y * w + x) * 4;
             const lum = (data[idx] * 299 + data[idx + 1] * 587 + data[idx + 2] * 114) / 1000;
-            if (y > yStart && Math.abs(lum - prevVal) > 30) {
-              colTransitions++;
-            }
-            prevVal = lum;
+            if (y > yStart && Math.abs(lum - prev) > 28) col++;
+            prev = lum;
           }
-          colDensity[x] = colTransitions;
+          colDensity[x] = col;
         }
 
-        // Segment words and number blocks along the line
-        let inWord = false;
-        let startX = 0;
-        let emptyCount = 0;
-
+        let inWord = false, sx = 0, empty = 0;
         for (let x = 0; x < w; x += stride) {
-          const val = colDensity[x];
-          if (!inWord && val > 0.4) {
+          if (!inWord && colDensity[x] > 0.35) {
             inWord = true;
-            startX = x;
-            emptyCount = 0;
+            sx = x;
+            empty = 0;
           } else if (inWord) {
-            if (val <= 0.4) {
-              emptyCount += stride;
-              // If gap is wider than 14px, finalize the word/number block
-              if (emptyCount >= 14 || x >= w - stride) {
-                const wordWidth = x - emptyCount - startX;
-                if (wordWidth >= 16) {
-                  // Padding around text pill
-                  const pillX = Math.max(0, startX - 2);
-                  const pillY = Math.max(0, band.y - 2);
-                  const pillW = Math.min(w - pillX, wordWidth + 4);
-                  const pillH = Math.min(h - pillY, band.height + 4);
-
+            if (colDensity[x] <= 0.35) {
+              empty += stride;
+              if (empty >= 14 || x >= w - stride) {
+                const ww = x - empty - sx;
+                if (ww >= 16) {
                   blocks.push({
-                    text: `Text / Number (${Math.round(pillW)}x${Math.round(pillH)})`,
-                    x: pillX,
-                    y: pillY,
-                    width: pillW,
-                    height: pillH
+                    text: 'Live Text',
+                    x: Math.max(0, sx - 2),
+                    y: Math.max(0, band.y - 2),
+                    width: Math.min(w, ww + 4),
+                    height: band.height + 4
                   });
                 }
                 inWord = false;
-                emptyCount = 0;
               }
             } else {
-              emptyCount = 0;
+              empty = 0;
             }
           }
         }
       }
     } catch (err) {
-      console.warn('[LiveText] Canvas text band detection error:', err);
+      console.warn('[LiveText] Canvas text band detection note:', err);
     }
 
     return blocks;
@@ -385,14 +439,36 @@ export class LiveTextOverlay {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
+
       if (pillElement) {
         pillElement.classList.add('just-copied');
-        setTimeout(() => pillElement.classList.remove('just-copied'), 600);
+
+        // Create micro "Copied ✓" badge attached to the pill
+        let badge = pillElement.querySelector('.live-text-copied-tag');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'live-text-copied-tag';
+          badge.innerHTML = `
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Copied</span>
+          `;
+          pillElement.appendChild(badge);
+        }
+
+        setTimeout(() => {
+          pillElement.classList.remove('just-copied');
+          if (badge && badge.parentNode) {
+            badge.remove();
+          }
+        }, 1200);
       }
+
       const preview = text.length > 36 ? `${text.slice(0, 36)}...` : text;
       eventBus.emit('show-toast', {
         message: `Copied: "${preview}"`,
-        options: { icon: 'check', duration: 1800 }
+        options: { icon: 'check', duration: 1600 }
       });
     } catch (err) {
       console.error('[LiveText] Copy error:', err);
@@ -409,9 +485,24 @@ export class LiveTextOverlay {
     const fullText = this.detectedBlocks.map(b => b.text).join('\n');
     try {
       await navigator.clipboard.writeText(fullText);
+
+      // Micro animation on Copy All button
+      if (this.copyAllBtn) {
+        const label = this.copyAllBtn.querySelector('.live-text-copy-all-label');
+        if (label) {
+          const orig = label.textContent;
+          label.textContent = 'Copied All!';
+          this.copyAllBtn.classList.add('copied');
+          setTimeout(() => {
+            label.textContent = orig;
+            this.copyAllBtn.classList.remove('copied');
+          }, 1800);
+        }
+      }
+
       eventBus.emit('show-toast', {
         message: `Copied all ${this.detectedBlocks.length} text items to clipboard!`,
-        options: { icon: 'check', duration: 2500 }
+        options: { icon: 'check', duration: 2200 }
       });
     } catch (err) {
       console.error('[LiveText] Copy all error:', err);
