@@ -34,7 +34,7 @@ export class LiveTextOverlay {
       toggleBtn.title = 'Live Text (T)';
       toggleBtn.setAttribute('aria-label', 'Toggle Live Text');
       toggleBtn.innerHTML = `
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 8V6a2 2 0 0 1 2-2h2"/>
           <path d="M16 4h2a2 2 0 0 1 2 2v2"/>
           <path d="M20 16v2a2 2 0 0 1-2 2h-2"/>
@@ -44,7 +44,7 @@ export class LiveTextOverlay {
           <line x1="8" y1="15" x2="13" y2="15"/>
         </svg>
       `;
-      this.rootContainer.appendChild(toggleBtn);
+      document.body.appendChild(toggleBtn);
     }
     this.toggleBtn = toggleBtn;
 
@@ -56,15 +56,15 @@ export class LiveTextOverlay {
       actionsBar.id = 'live-text-actions-bar';
       actionsBar.style.display = 'none';
       actionsBar.innerHTML = `
-        <button class="live-text-copy-all-btn" id="btn-live-text-copy-all" title="Copy All">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="live-text-copy-all-btn" id="btn-live-text-copy-all" title="Copy All detected text">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
           <span class="live-text-copy-all-label">Copy All</span>
         </button>
       `;
-      this.rootContainer.appendChild(actionsBar);
+      document.body.appendChild(actionsBar);
     }
     this.actionsBar = actionsBar;
     this.copyAllBtn = document.getElementById('btn-live-text-copy-all');
