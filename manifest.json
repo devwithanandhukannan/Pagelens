@@ -43,10 +43,6 @@
     "service_worker": "src/background/service-worker.js",
     "type": "module"
   },
-  "options_ui": {
-    "page": "src/options/options.html",
-    "open_in_tab": true
-  },
   "commands": {
     "_execute_action": {
       "suggested_key": {

@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const fullPageBtn = document.getElementById('btn-capture-full');
   const visibleBtn = document.getElementById('btn-capture-visible');
   const openStudioBtn = document.getElementById('btn-open-studio');
-  const optionsLink = document.getElementById('link-options');
   const statusContainer = document.getElementById('popup-status-area');
   const statusText = document.getElementById('popup-status-text');
   const noticeCard = document.getElementById('popup-notice-card');
@@ -123,17 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Options page link
-  if (optionsLink) {
-    optionsLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
-        chrome.runtime.openOptionsPage();
-      } else {
-        window.open('../options/options.html', '_blank');
-      }
-    });
-  }
+
 
   // 5. Pre-check active tab eligibility
   if (typeof chrome !== 'undefined' && chrome.tabs?.query) {
