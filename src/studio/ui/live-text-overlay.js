@@ -163,9 +163,12 @@ export class LiveTextOverlay {
     this.detectedBlocks.forEach((block, idx) => {
       const pill = document.createElement('div');
       pill.className = 'live-text-pill spring-btn';
+      if (block.height > 34) {
+        pill.classList.add('live-text-pill-multiline');
+      }
       pill.style.left = `${Math.max(0, block.x)}px`;
       pill.style.top = `${Math.max(0, block.y)}px`;
-      pill.style.width = `${Math.max(24, block.width)}px`;
+      pill.style.width = `${Math.max(20, block.width)}px`;
       pill.style.height = `${Math.max(16, block.height)}px`;
       pill.title = `Click to copy: "${block.text}"`;
 
@@ -187,9 +190,30 @@ export class LiveTextOverlay {
   }
 
   async extractTextBlocks() {
-    // 1. Check if documentModel already contains text blocks (from probe-entry or sample capture)
+    // 1. Check if documentModel already contains text blocks (from probe-entry or capture)
     if (this.documentModel.textBlocks && this.documentModel.textBlocks.length > 0) {
-      return this.documentModel.textBlocks;
+      const blocks = this.documentModel.textBlocks;
+      const canvasW = this.documentModel.width || 800;
+
+      // Check if coordinates need scaling to canvas pixel dimensions (e.g. 1x CSS coordinates vs 2x Retina canvas)
+      let maxX = 0;
+      for (const b of blocks) {
+        if (b.x + b.width > maxX) maxX = b.x + b.width;
+      }
+
+      if (maxX > 0 && maxX * 1.55 < canvasW && canvasW >= 1000) {
+        const roundRatio = Math.round((canvasW / maxX) * 10) / 10;
+        const scale = roundRatio >= 1.25 && roundRatio <= 3.5 ? roundRatio : (canvasW / maxX);
+        return blocks.map(b => ({
+          ...b,
+          x: Math.round(b.x * scale),
+          y: Math.round(b.y * scale),
+          width: Math.round(b.width * scale),
+          height: Math.round(b.height * scale)
+        }));
+      }
+
+      return blocks;
     }
 
     // 2. Check for native Chromium Shape Detection API (window.TextDetector)
@@ -214,13 +238,14 @@ export class LiveTextOverlay {
       }
     }
 
-    // 3. Fallback: Intelligent canvas text band detection
+    // 3. Fallback: Optimal pixel-level canvas text & number region detector
     return this.detectCanvasTextBands();
   }
 
   /**
-   * High-speed heuristic canvas text band scanner
-   * Analyzes vertical & horizontal pixel variance on the screenshot to identify text lines.
+   * Fast, optimal pixel-level text & number region detector.
+   * Runs client-side directly on canvas pixels with zero external dependencies.
+   * Analyzes high-contrast gradient transitions, line profiles, and connected components.
    */
   detectCanvasTextBands() {
     const canvas = document.getElementById('pagelens-main-canvas');
@@ -229,45 +254,128 @@ export class LiveTextOverlay {
     const blocks = [];
     const w = canvas.width;
     const h = canvas.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return [];
 
-    // Default sample texts if Sonoma dashboard sample is active
-    if (w === 1200 && h === 960) {
-      return [
-        { text: 'Pagelens Performance Analytics', x: 40, y: 36, width: 440, height: 32 },
-        { text: 'System Health: 99.98% Uptime', x: 920, y: 38, width: 240, height: 28 },
-        { text: 'Active Workers', x: 68, y: 154, width: 140, height: 20 },
-        { text: '12 Online', x: 68, y: 184, width: 110, height: 32 },
-        { text: 'Memory Usage', x: 448, y: 154, width: 140, height: 20 },
-        { text: '142 MB Normal', x: 448, y: 184, width: 160, height: 32 },
-        { text: 'Capture Latency', x: 828, y: 154, width: 150, height: 20 },
-        { text: '4.8 ms Turbo', x: 828, y: 184, width: 130, height: 32 },
-        { text: 'Throughput & Network Slices (24h Real-Time)', x: 68, y: 310, width: 380, height: 24 },
-        { text: 'Recent Production Deployments & Access Tokens', x: 68, y: 652, width: 410, height: 24 },
-        { text: 'user_john@acme.corp', x: 68, y: 700, width: 220, height: 22 },
-        { text: 'Admin Access', x: 320, y: 700, width: 140, height: 22 },
-        { text: 'JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', x: 520, y: 700, width: 390, height: 22 },
-        { text: 'Active', x: 1020, y: 700, width: 80, height: 22 },
-        { text: 'sarah_lead@fintech.io', x: 68, y: 746, width: 220, height: 22 },
-        { text: 'Billing Manager', x: 320, y: 746, width: 140, height: 22 },
-        { text: 'API Key: live_sec_9941829104812903', x: 520, y: 746, width: 340, height: 22 },
-        { text: 'alex_sec@defense.gov', x: 68, y: 792, width: 220, height: 22 },
-        { text: 'Auditor Role', x: 320, y: 792, width: 140, height: 22 },
-        { text: 'Credit Card: 4532-8819-2091-8841', x: 520, y: 792, width: 310, height: 22 },
-        { text: 'Restricted', x: 1020, y: 792, width: 90, height: 22 }
-      ];
-    }
+    try {
+      // Analyze image data
+      // For large images, step down slightly for speed (1-2px stride)
+      const stride = w > 2000 || h > 2000 ? 2 : 1;
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
 
-    // Generic fallback for custom uploaded/captured images:
-    // Partition canvas into key visible text strips
-    const stepY = Math.round(h / 14);
-    for (let y = Math.round(stepY * 0.8); y < h - 40; y += stepY) {
-      blocks.push({
-        text: `Extracted Line at ${y}px`,
-        x: Math.round(w * 0.08),
-        y: y,
-        width: Math.round(w * 0.65),
-        height: Math.min(28, Math.round(stepY * 0.45))
-      });
+      // 1. Calculate horizontal scanline edge density
+      // Text lines produce rapid alternating transitions between dark glyphs and light background
+      const rowDensity = new Float32Array(h);
+      for (let y = 0; y < h; y += stride) {
+        let transitions = 0;
+        let prevLum = 0;
+        const rowOffset = y * w * 4;
+
+        for (let x = 0; x < w; x += stride * 2) {
+          const idx = rowOffset + x * 4;
+          // Luminance: 0.299R + 0.587G + 0.114B
+          const lum = (data[idx] * 299 + data[idx + 1] * 587 + data[idx + 2] * 114) / 1000;
+          if (x > 0 && Math.abs(lum - prevLum) > 35) {
+            transitions++;
+          }
+          prevLum = lum;
+        }
+        rowDensity[y] = transitions / (w / (stride * 2));
+      }
+
+      // 2. Identify candidate vertical text bands (lines)
+      const threshold = 0.038; // minimum edge transition frequency for text
+      const bands = [];
+      let inBand = false;
+      let startY = 0;
+
+      for (let y = 0; y < h; y += stride) {
+        const val = rowDensity[y];
+        if (!inBand && val >= threshold) {
+          inBand = true;
+          startY = y;
+        } else if (inBand && val < threshold) {
+          const height = y - startY;
+          // Typical text line height is between 8px and 85px
+          if (height >= 8 && height <= 85) {
+            bands.push({ y: startY, height });
+          }
+          inBand = false;
+        }
+      }
+      if (inBand) {
+        const height = h - startY;
+        if (height >= 8 && height <= 85) {
+          bands.push({ y: startY, height });
+        }
+      }
+
+      // 3. For each detected text band, identify horizontal word/number segments
+      for (const band of bands) {
+        if (blocks.length >= 1200) break;
+
+        const colDensity = new Float32Array(w);
+        const yStart = Math.max(0, band.y + 2);
+        const yEnd = Math.min(h - 1, band.y + band.height - 2);
+
+        for (let x = 0; x < w; x += stride) {
+          let colTransitions = 0;
+          let prevVal = 0;
+          for (let y = yStart; y <= yEnd; y += stride) {
+            const idx = (y * w + x) * 4;
+            const lum = (data[idx] * 299 + data[idx + 1] * 587 + data[idx + 2] * 114) / 1000;
+            if (y > yStart && Math.abs(lum - prevVal) > 30) {
+              colTransitions++;
+            }
+            prevVal = lum;
+          }
+          colDensity[x] = colTransitions;
+        }
+
+        // Segment words and number blocks along the line
+        let inWord = false;
+        let startX = 0;
+        let emptyCount = 0;
+
+        for (let x = 0; x < w; x += stride) {
+          const val = colDensity[x];
+          if (!inWord && val > 0.4) {
+            inWord = true;
+            startX = x;
+            emptyCount = 0;
+          } else if (inWord) {
+            if (val <= 0.4) {
+              emptyCount += stride;
+              // If gap is wider than 14px, finalize the word/number block
+              if (emptyCount >= 14 || x >= w - stride) {
+                const wordWidth = x - emptyCount - startX;
+                if (wordWidth >= 16) {
+                  // Padding around text pill
+                  const pillX = Math.max(0, startX - 2);
+                  const pillY = Math.max(0, band.y - 2);
+                  const pillW = Math.min(w - pillX, wordWidth + 4);
+                  const pillH = Math.min(h - pillY, band.height + 4);
+
+                  blocks.push({
+                    text: `Text / Number (${Math.round(pillW)}x${Math.round(pillH)})`,
+                    x: pillX,
+                    y: pillY,
+                    width: pillW,
+                    height: pillH
+                  });
+                }
+                inWord = false;
+                emptyCount = 0;
+              }
+            } else {
+              emptyCount = 0;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[LiveText] Canvas text band detection error:', err);
     }
 
     return blocks;

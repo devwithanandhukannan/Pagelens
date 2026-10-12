@@ -73,12 +73,5 @@ chrome.runtime.onStartup.addListener(async () => {
   await SessionRegistry.finishSession();
 });
 
-// Open Welcome / Getting Started onboarding page on extension install
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('src/welcome/welcome.html')
-    });
-  }
-});
+
 

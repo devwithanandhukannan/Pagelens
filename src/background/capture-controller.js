@@ -73,6 +73,24 @@ export class CaptureController {
     }
 
     try {
+      // Extract visible text, numbers, and badges for Apple Live Text
+      let textBlocks = [];
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['src/content/probe-entry.js'],
+        });
+        const textRes = await chrome.tabs.sendMessage(tab.id, {
+          type: 'PAGELENS_EXTRACT_TEXT_BLOCKS',
+          payload: { visibleOnly: true }
+        });
+        if (textRes && textRes.textBlocks) {
+          textBlocks = textRes.textBlocks;
+        }
+      } catch (probeErr) {
+        console.warn('[CaptureController] Visible text extraction note:', probeErr);
+      }
+
       const dataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
 
       // Save binary image in BlobStore (IndexedDB)
@@ -84,6 +102,7 @@ export class CaptureController {
           url: tab.url,
           tabId: tab.id,
           type: 'visible',
+          textBlocks: textBlocks || [],
         });
       } catch (blobErr) {
         console.warn('[CaptureController] Failed to persist in BlobStore:', blobErr);
@@ -98,6 +117,7 @@ export class CaptureController {
           tabId: tab.id,
           timestamp: Date.now(),
           type: 'visible',
+          textBlocks: textBlocks || [],
         },
         pagelens_last_capture_id: sessionId,
       });
@@ -253,6 +273,17 @@ export class CaptureController {
         rectWidth: geom.rectWidth || geom.viewportWidth,
         bgColor: geom.bgColor || '#111b21',
       });
+
+      // 6.5. Extract comprehensive text blocks across the fully scrolled and primed page
+      try {
+        const textRes = await chrome.tabs.sendMessage(tab.id, {
+          type: 'PAGELENS_EXTRACT_TEXT_BLOCKS',
+          payload: { visibleOnly: false, dpr: geom.dpr }
+        });
+        if (textRes && textRes.textBlocks && textRes.textBlocks.length > 0) {
+          geom.textBlocks = textRes.textBlocks;
+        }
+      } catch (_) {}
 
       // 7. Restore page
       await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_RESTORE_PAGE' });

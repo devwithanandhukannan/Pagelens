@@ -10,16 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const visibleBtn = document.getElementById('btn-capture-visible');
   const openStudioBtn = document.getElementById('btn-open-studio');
   const optionsLink = document.getElementById('link-options');
-  const welcomeLink = document.getElementById('link-welcome');
   const statusContainer = document.getElementById('popup-status-area');
   const statusText = document.getElementById('popup-status-text');
-
-  if (welcomeLink) {
-    welcomeLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      window.open('../welcome/welcome.html', '_blank');
-    });
-  }
+  const noticeCard = document.getElementById('popup-notice-card');
+  const noticeText = document.getElementById('popup-notice-text');
 
   // Detect platform for shortcut badges
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -45,13 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   popupState.subscribe((state) => {
     if (state.status === 'capturing' || state.status === 'stitching') {
-      statusContainer.style.display = 'block';
+      if (noticeCard) noticeCard.style.display = 'none';
+      statusContainer.style.display = 'flex';
       statusText.textContent = state.message || 'Capturing...';
       updateSegments(state.progress || 20);
       fullPageBtn.disabled = true;
       visibleBtn.disabled = true;
     } else if (state.status === 'error') {
-      statusContainer.style.display = 'block';
+      statusContainer.style.display = 'flex';
       let displayMsg = state.message;
       if (displayMsg && (displayMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND') || displayMsg.includes('quota'))) {
         displayMsg = 'Capture rate limit reached. Waiting a moment before retry...';
@@ -59,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
       statusText.textContent = `Error: ${displayMsg}`;
       fullPageBtn.disabled = false;
       visibleBtn.disabled = false;
+    } else {
+      statusContainer.style.display = 'none';
     }
   });
 
@@ -67,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg.type === 'PAGELENS_CAPTURE_PROGRESS' && msg.payload) {
         const { text, progress } = msg.payload;
-        if (statusContainer) statusContainer.style.display = 'block';
+        if (noticeCard) noticeCard.style.display = 'none';
+        if (statusContainer) statusContainer.style.display = 'flex';
         if (statusText && text) statusText.textContent = text;
         updateSegments(progress || 50);
       }
@@ -142,10 +140,23 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
       if (!tab) return;
       const url = tab.url || '';
-      if (url.startsWith('chrome:') || url.startsWith('chrome-extension:') || url.startsWith('devtools:') || url.startsWith('about:')) {
-        statusContainer.style.display = 'block';
-        statusText.textContent = 'Note: Internal Chrome and extension pages are protected by browser security. Switch to any regular website to capture.';
-        progressBar.style.display = 'none';
+      if (url.startsWith('chrome:') || url.startsWith('chrome-extension:') || url.startsWith('devtools:') || url.startsWith('about:') || url.startsWith('edge:') || url.startsWith('brave:')) {
+        if (noticeCard) {
+          noticeCard.style.display = 'flex';
+          if (noticeText) {
+            noticeText.textContent = 'Browser-protected page. Switch to any regular website to capture.';
+          }
+        }
+        fullPageBtn.disabled = true;
+        visibleBtn.disabled = true;
+        fullPageBtn.style.opacity = '0.5';
+        visibleBtn.style.opacity = '0.5';
+      } else {
+        if (noticeCard) noticeCard.style.display = 'none';
+        fullPageBtn.disabled = false;
+        visibleBtn.disabled = false;
+        fullPageBtn.style.opacity = '1';
+        visibleBtn.style.opacity = '1';
       }
     }).catch(() => {});
   }

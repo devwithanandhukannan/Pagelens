@@ -44,7 +44,13 @@
       </div>
     </button>
 
-    <!-- Status / Segmented Progress Card (Matching GoFullPage / Image 2) -->
+    <!-- Protected Page Warning Card (Clean, non-colliding alert) -->
+    <div id="popup-notice-card" class="popup-notice-card" style="display: none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="popup-notice-text">Internal browser pages are protected. Switch to any regular website to capture.</span>
+    </div>
+
+    <!-- Status / Segmented Progress Card (Only shown during active capture) -->
     <div id="popup-status-area" style="display: none;" class="popup-status-card">
       <div class="popup-hud-header">
         <span class="popup-hud-title">Screen capture in progress...</span>
@@ -70,17 +76,9 @@
       </div>
     </div>
 
-    <!-- Quiet Footer -->
-    <div class="popup-footer">
-      <span style="display: flex; align-items: center; gap: 6px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Ready to capture
-      </span>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <a class="quiet-link" id="link-welcome" title="View Welcome & Shortcuts Guide">Guide</a>
-        <span style="color: var(--border-transparent); font-size: 10px;">•</span>
-        <a class="quiet-link" id="link-options">Settings</a>
-      </div>
+    <!-- Minimal Footer -->
+    <div class="popup-footer" style="justify-content: flex-end;">
+      <a class="quiet-link" id="link-options">Settings</a>
     </div>
   </div>
 

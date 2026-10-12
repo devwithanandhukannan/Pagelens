@@ -452,34 +452,109 @@
     }
   }
 
-  // --- 8. Text Extraction for Apple Live Text ---
-  function extractPageTextBlocks() {
+  // --- 8. Comprehensive Text & Number Extraction for Apple Live Text ---
+  function extractPageTextBlocks(options = {}) {
+    const { visibleOnly = false, dpr = window.devicePixelRatio || 1 } = options;
     const blocks = [];
     try {
-      const textSelectors = 'h1, h2, h3, h4, h5, h6, p, li, a, td, th, blockquote, code, pre, button, label, figcaption';
-      const nodes = document.querySelectorAll(textSelectors);
       const scrollX = window.scrollX || window.pageXOffset || 0;
       const scrollY = window.scrollY || window.pageYOffset || 0;
+      const viewW = window.innerWidth;
+      const viewH = window.innerHeight;
 
-      for (const node of nodes) {
-        if (blocks.length >= 250) break;
+      // Select candidate elements that hold text, prices, badges, numbers, paragraphs
+      const candidateElements = document.querySelectorAll(
+        'span, div, p, a, b, strong, em, i, mark, small, time, label, button, li, td, th, h1, h2, h3, h4, h5, h6, dd, dt, figcaption, blockquote, code, pre, summary'
+      );
+
+      // Block-level tags that indicate layout containers (not leaf text units)
+      const blockContainerSelector = 'div, p, ul, ol, li, table, section, article, header, footer, aside, nav, h1, h2, h3, h4, h5, h6, blockquote, form, main';
+
+      const seenRects = new Set();
+
+      for (const node of candidateElements) {
+        if (blocks.length >= 4000) break;
         if (node.id && node.id.startsWith('pagelens-')) continue;
-        const text = node.innerText?.trim();
-        if (!text || text.length < 2) continue;
-        if (node.children.length > 3 && text.length > 200) continue;
+        if (node.classList && (node.classList.contains('pagelens-overlay') || node.classList.contains('pagelens-hud'))) continue;
 
-        const rect = node.getBoundingClientRect();
-        if (rect.width > 12 && rect.height > 8 && rect.bottom >= 0 && rect.top <= window.innerHeight * 10) {
-          blocks.push({
-            text: text.slice(0, 300),
-            x: Math.round(rect.left + scrollX),
-            y: Math.round(rect.top + scrollY),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-          });
+        // Skip non-leaf elements: if an element contains block containers, let its children be collected instead
+        // (Unless it's a paragraph or heading which we want as a cohesive block)
+        const isBlockText = /^(P|H[1-6]|LI|BLOCKQUOTE|FIGCAPTION|TD|TH)$/i.test(node.tagName);
+        if (!isBlockText && node.querySelector(blockContainerSelector)) {
+          continue;
         }
+
+        // If node is an inline child inside an already cohesive block (like span inside p or h1-h6),
+        // let the parent paragraph/heading represent the entire text block unless it's a link or button
+        if (!isBlockText && !/^(A|BUTTON)$/i.test(node.tagName)) {
+          const parentBlock = node.closest('p, h1, h2, h3, h4, h5, h6, blockquote, pre');
+          if (parentBlock && parentBlock !== node) {
+            continue;
+          }
+        }
+
+        // Extract visible text
+        const rawText = node.innerText || node.textContent || '';
+        const text = rawText.trim().replace(/\s+/g, ' ');
+        if (!text || text.length < 1) continue;
+
+        // Must contain at least one alphanumeric character (text, number, price digit)
+        if (!/[0-9a-zA-Z\u00C0-\u024F\u0900-\u0D7F]/.test(text)) continue;
+
+        // Check if element is rendered and visible
+        const rect = node.getBoundingClientRect();
+        if (rect.width < 6 || rect.height < 6) continue;
+
+        // In visibleOnly mode: must be within the current viewport
+        if (visibleOnly) {
+          if (rect.bottom <= 0 || rect.top >= viewH || rect.right <= 0 || rect.left >= viewW) {
+            continue;
+          }
+        }
+
+        // Check computed styles
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+          continue;
+        }
+
+        // Compute coordinates scaled to canvas device pixels
+        let x, y, width, height;
+        if (visibleOnly) {
+          x = Math.round(rect.left * dpr);
+          y = Math.round(rect.top * dpr);
+        } else {
+          // Full page capture
+          if (primaryScrollElement) {
+            const containerRect = primaryScrollElement.getBoundingClientRect();
+            x = Math.round((rect.left - containerRect.left + primaryScrollElement.scrollLeft) * dpr);
+            y = Math.round((rect.top - containerRect.top + primaryScrollElement.scrollTop) * dpr);
+          } else {
+            x = Math.round((rect.left + scrollX) * dpr);
+            y = Math.round((rect.top + scrollY) * dpr);
+          }
+        }
+        width = Math.round(rect.width * dpr);
+        height = Math.round(rect.height * dpr);
+
+        // Deduplication: avoid exact duplicate bounding boxes (within 4px tolerance)
+        const key = `${Math.round(x / 6)}_${Math.round(y / 6)}_${Math.round(width / 6)}_${Math.round(height / 6)}`;
+        if (seenRects.has(key)) continue;
+        seenRects.add(key);
+
+        blocks.push({
+          text: text.slice(0, 600),
+          x,
+          y,
+          width,
+          height,
+          dpr,
+          tag: node.tagName.toLowerCase()
+        });
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[Pagelens] extractPageTextBlocks error:', err);
+    }
     return blocks;
   }
 
@@ -494,9 +569,16 @@
               break;
             }
 
+            case 'PAGELENS_EXTRACT_TEXT_BLOCKS': {
+              const { visibleOnly, dpr } = message.payload || {};
+              const blocks = extractPageTextBlocks({ visibleOnly, dpr: dpr || window.devicePixelRatio || 1 });
+              sendResponse({ success: true, textBlocks: blocks });
+              break;
+            }
+
             case 'PAGELENS_MEASURE_PAGE': {
               const geom = measurePage();
-              geom.textBlocks = extractPageTextBlocks();
+              geom.textBlocks = extractPageTextBlocks({ visibleOnly: false, dpr: geom.dpr });
               initializeRestoreGuard(geom.scrollX, geom.scrollY);
               freezeMotion();
               findAndMarkStickyElements();

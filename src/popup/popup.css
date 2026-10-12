@@ -140,6 +140,27 @@ body {
   color: var(--accent-violet);
 }
 
+/* Browser Protected Page Notice Card */
+.popup-notice-card {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #FBBF24;
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="porcelain"] .popup-notice-card {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #B45309;
+}
+
 /* Segmented Progress Card (Matching GoFullPage / Image 2) */
 .popup-status-card {
   background: var(--surface-nested);

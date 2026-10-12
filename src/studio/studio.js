@@ -436,7 +436,8 @@ class StudioApp {
             size: blob.size,
             width: w,
             height: h,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            textBlocks: meta.textBlocks || documentModel.textBlocks || [],
           });
           eventBus.emit('history-updated');
         }
