@@ -41,6 +41,10 @@ export class AnnotationLayer {
           this.renderText(ctx, item);
           break;
 
+        case 'text_draft':
+          this.renderTextDraft(ctx, item);
+          break;
+
         case 'stamp':
           this.renderStamp(ctx, item);
           break;
@@ -250,39 +254,89 @@ export class AnnotationLayer {
     const fontSize = item.fontSize || 16;
     ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
     ctx.fillStyle = item.color || '#F8FAFC';
-    const isCenter = item.align === 'center';
-    ctx.textAlign = isCenter ? 'center' : 'left';
-    ctx.textBaseline = 'top';
-
     const text = item.text || 'Text';
     const lines = text.split('\n');
+    const lineHeight = fontSize * 1.35;
+    const totalTextH = lines.length * lineHeight;
 
-    // Soft backdrop capsule if configured
+    let maxLineWidth = 0;
+    for (const line of lines) {
+      maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
+    }
+
+    const paddingX = 14;
+    const paddingY = 10;
+    const rectW = Math.max(item.width || 0, maxLineWidth + paddingX * 2);
+    const rectH = Math.max(item.height || 0, totalTextH + paddingY * 2);
+    const rectX = item.x;
+    const rectY = item.y;
+
+    // Draw backdrop card if configured
     if (item.showBackground !== false) {
-      const padding = 8;
-      let maxLineWidth = 0;
-      for (const line of lines) {
-        maxLineWidth = Math.max(maxLineWidth, ctx.measureText(line).width);
-      }
-      const totalTextH = lines.length * (fontSize * 1.3);
-      const bgX = isCenter ? item.x - maxLineWidth / 2 - padding : item.x - padding;
-
       ctx.save();
-      ctx.fillStyle = 'rgba(18, 19, 23, 0.88)';
-      const radius = 6;
+      ctx.fillStyle = item.backgroundColor || 'rgba(18, 19, 23, 0.90)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+      ctx.lineWidth = 1;
+      const radius = 8;
       if (ctx.roundRect) {
         ctx.beginPath();
-        ctx.roundRect(bgX, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2, radius);
+        ctx.roundRect(rectX, rectY, rectW, rectH, radius);
         ctx.fill();
+        ctx.stroke();
       } else {
-        ctx.fillRect(bgX, item.y - padding, maxLineWidth + padding * 2, totalTextH + padding * 2);
+        ctx.fillRect(rectX, rectY, rectW, rectH);
+        ctx.strokeRect(rectX, rectY, rectW, rectH);
       }
       ctx.restore();
     }
 
+    // Text rendering: vertically centered inside the rectangle
+    ctx.save();
+    ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif`;
+    ctx.fillStyle = item.color || '#F8FAFC';
+    ctx.textBaseline = 'top';
+
+    const isCenter = item.align !== 'left';
+    ctx.textAlign = isCenter ? 'center' : 'left';
+    const textX = isCenter ? rectX + rectW / 2 : rectX + paddingX;
+    const startY = rectY + Math.max(paddingY, (rectH - totalTextH) / 2);
+
     lines.forEach((line, i) => {
-      ctx.fillText(line, item.x, item.y + i * (fontSize * 1.3));
+      ctx.fillText(line, textX, startY + i * lineHeight);
     });
+    ctx.restore();
+  }
+
+  renderTextDraft(ctx, item) {
+    const x = Math.min(item.x, item.x + item.width);
+    const y = Math.min(item.y, item.y + item.height);
+    const w = Math.abs(item.width);
+    const h = Math.abs(item.height);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(18, 19, 23, 0.70)';
+    ctx.strokeStyle = '#6D63E6';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, 8);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    if (w > 60 && h > 24) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.font = '500 12px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Release to enter text', x + w / 2, y + h / 2);
+    }
+    ctx.restore();
   }
 
   renderEmoji(ctx, item) {
@@ -298,24 +352,27 @@ export class AnnotationLayer {
   }
 
   renderStamp(ctx, item) {
-    const radius = 14;
+    const size = item.size || item.width || 28;
+    const radius = size / 2;
     const cx = item.x;
     const cy = item.y;
 
     // Outer circle
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.fillStyle = item.color || '#6D63E6';
+    ctx.fillStyle = item.color || '#EF4444';
     ctx.fill();
 
-    // Soft outer shadow/glow
-    ctx.lineWidth = 2;
+    // White outer border/ring scaled with size
+    const strokeW = Math.max(2, Math.round(size * 0.08));
+    ctx.lineWidth = strokeW;
     ctx.strokeStyle = '#FFFFFF';
     ctx.stroke();
 
-    // Number text
+    // Number text proportionally scaled
+    const fontSize = Math.max(12, Math.round(size * 0.48));
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 12px "SF Pro Text", -apple-system, sans-serif';
+    ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(item.number || '1'), cx, cy);
@@ -333,8 +390,15 @@ export class AnnotationLayer {
       y = item.y - s / 2;
       w = s;
       h = s;
-    } else if (item.type === 'text' && item.align === 'center') {
-      x = item.x - w / 2;
+    } else if (item.type === 'stamp') {
+      const s = item.size || item.width || 28;
+      x = item.x - s / 2;
+      y = item.y - s / 2;
+      w = s;
+      h = s;
+    } else if (item.type === 'text') {
+      w = item.width || 100;
+      h = item.height || 40;
     }
 
     ctx.save();

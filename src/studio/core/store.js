@@ -18,6 +18,7 @@ export class Store {
         blurType: 'pixelate', // 'pixelate' | 'blur'
         blurStrength: 10,
         stampCounter: 1,
+        stampSize: 36,
         aspectPreset: 'free', // 'free' | '16:9' | '4:3' | '1:1'
       },
       selectedObjectId: null,

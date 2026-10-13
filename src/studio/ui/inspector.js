@@ -40,8 +40,9 @@ export class Inspector {
 
     // If an object is selected, determine its current color
     let activeColor = toolOptions.color || '#6D63E6';
+    let selectedObj = null;
     if (selectedObjectId) {
-      const selectedObj = documentModel.getAnnotation(selectedObjectId);
+      selectedObj = documentModel.getAnnotation(selectedObjectId);
       if (selectedObj && selectedObj.color) {
         activeColor = selectedObj.color;
       }
@@ -145,6 +146,36 @@ export class Inspector {
         <div class="inspector-group">
           <span class="inspector-label">Size</span>
           <input type="range" min="1" max="16" value="${toolOptions.strokeWidth || 3}" id="inspector-stroke-slider" class="inspector-mini-slider" style="width: 52px; accent-color: var(--accent-violet);">
+        </div>
+      `;
+    } else if (activeTool === 'stamp' || (selectedObj && selectedObj.type === 'stamp')) {
+      const activeSize = selectedObj ? (selectedObj.size || selectedObj.width || 36) : (toolOptions.stampSize || 36);
+      const counter = toolOptions.stampCounter || 1;
+      this.inspectorEl.innerHTML = `
+        ${this.renderColorGroup(activeColor)}
+        <div class="toolbar-divider"></div>
+        <div class="inspector-group">
+          <span class="inspector-label">Size</span>
+          <input type="range" min="16" max="160" value="${activeSize}" id="inspector-stamp-size-slider" class="inspector-mini-slider" style="width: 68px; accent-color: var(--accent-violet);">
+          <span class="inspector-label" id="inspector-stamp-size-val" style="font-size: 11px; opacity: 0.8; min-width: 26px;">${activeSize}px</span>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="inspector-group">
+          <span class="inspector-label">Next #${counter}</span>
+          <button class="spring-btn icon-btn" id="btn-reset-stamp-counter" title="Reset counter to 1" style="height: 24px; padding: 0 6px; font-size: 10px; width: auto;">
+            Reset
+          </button>
+        </div>
+      `;
+    } else if (activeTool === 'text' || (selectedObj && selectedObj.type === 'text')) {
+      const activeFontSize = selectedObj ? (selectedObj.fontSize || 18) : (toolOptions.fontSize || 18);
+      this.inspectorEl.innerHTML = `
+        ${this.renderColorGroup(activeColor)}
+        <div class="toolbar-divider"></div>
+        <div class="inspector-group">
+          <span class="inspector-label">Font Size</span>
+          <input type="range" min="12" max="72" value="${activeFontSize}" id="inspector-text-size-slider" class="inspector-mini-slider" style="width: 68px; accent-color: var(--accent-violet);">
+          <span class="inspector-label" id="inspector-text-size-val" style="font-size: 11px; opacity: 0.8; min-width: 26px;">${activeFontSize}px</span>
         </div>
       `;
     } else {
@@ -269,6 +300,45 @@ export class Inspector {
         const { selectedObjectId } = this.store.getState();
         if (selectedObjectId) {
           documentModel.updateAnnotation(selectedObjectId, { strokeWidth: width, fontSize: width * 4 });
+        }
+      });
+    }
+
+    // Stamp size slider
+    const stampSlider = this.inspectorEl.querySelector('#inspector-stamp-size-slider');
+    const stampValLabel = this.inspectorEl.querySelector('#inspector-stamp-size-val');
+    if (stampSlider) {
+      stampSlider.addEventListener('input', (e) => {
+        const size = parseInt(e.target.value, 10);
+        this.store.setToolOption('stampSize', size);
+        if (stampValLabel) stampValLabel.textContent = `${size}px`;
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { size, width: size, height: size });
+        }
+      });
+    }
+
+    // Reset stamp counter
+    const resetStampBtn = this.inspectorEl.querySelector('#btn-reset-stamp-counter');
+    if (resetStampBtn) {
+      resetStampBtn.addEventListener('click', () => {
+        this.store.setToolOption('stampCounter', 1);
+        this.update(this.store.getState());
+      });
+    }
+
+    // Text font size slider
+    const textSlider = this.inspectorEl.querySelector('#inspector-text-size-slider');
+    const textValLabel = this.inspectorEl.querySelector('#inspector-text-size-val');
+    if (textSlider) {
+      textSlider.addEventListener('input', (e) => {
+        const fontSize = parseInt(e.target.value, 10);
+        this.store.setToolOption('fontSize', fontSize);
+        if (textValLabel) textValLabel.textContent = `${fontSize}px`;
+        const { selectedObjectId } = this.store.getState();
+        if (selectedObjectId) {
+          documentModel.updateAnnotation(selectedObjectId, { fontSize });
         }
       });
     }

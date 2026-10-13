@@ -107,23 +107,24 @@ export class EraserTool extends ToolInterface {
     if (a.type === 'stamp' || a.type === 'emoji') {
       const cx = a.x;
       const cy = a.y;
-      const stampRadius = (a.size ? a.size / 2 : 20) + r;
+      const baseSize = a.size || a.width || 28;
+      const stampRadius = baseSize / 2 + r;
       return Math.hypot(pt.x - cx, pt.y - cy) <= stampRadius;
     }
 
-    // 5. Rectangles, Text, Blurs, Redacts
+    // 5. Text Annotations
+    if (a.type === 'text') {
+      const w = a.width || 100;
+      const h = a.height || 40;
+      return pt.x >= a.x - r && pt.x <= a.x + w + r &&
+             pt.y >= a.y - r && pt.y <= a.y + h + r;
+    }
+
+    // 6. Rectangles, Blurs, Redacts
     const minX = Math.min(a.x, a.x + (a.width || 0)) - r;
     const maxX = Math.max(a.x, a.x + (a.width || 0)) + r;
     const minY = Math.min(a.y, a.y + (a.height || 0)) - r;
     const maxY = Math.max(a.y, a.y + (a.height || 0)) + r;
-
-    // Adjust for text where y is baseline or top
-    if (a.type === 'text') {
-      const fontSize = a.fontSize || 16;
-      const estimatedWidth = Math.max(30, (a.text?.length || 4) * fontSize * 0.65);
-      return pt.x >= a.x - r && pt.x <= a.x + estimatedWidth + r &&
-             pt.y >= a.y - fontSize - r && pt.y <= a.y + r;
-    }
 
     return pt.x >= minX && pt.x <= maxX && pt.y >= minY && pt.y <= maxY;
   }

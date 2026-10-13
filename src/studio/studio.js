@@ -46,6 +46,9 @@ class StudioApp {
     this.shell = new AppShell(root);
 
     // Mount UI components
+    window.__pagelensStore = store;
+    window.__pagelensDocModel = documentModel;
+
     this.topbar = new TopBar(document.getElementById('topbar-mount'), store, documentModel);
     this.toolbar = new Toolbar(document.getElementById('toolbar-mount'), store);
     this.inspector = new Inspector(document.getElementById('inspector-mount'), store);
@@ -103,7 +106,13 @@ class StudioApp {
 
     // Keyboard handlers (Space for panning, Escape, Delete)
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && !this.isSpacePressed && e.target.tagName !== 'INPUT') {
+      if (
+        e.code === 'Space' &&
+        !this.isSpacePressed &&
+        e.target.tagName !== 'INPUT' &&
+        e.target.tagName !== 'TEXTAREA' &&
+        !e.target.isContentEditable
+      ) {
         this.isSpacePressed = true;
         this.container.classList.add('panning');
       }

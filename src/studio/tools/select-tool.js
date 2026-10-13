@@ -8,6 +8,7 @@ import { ToolInterface } from './tool-interface.js';
 import { pointInRect } from '../../shared/geometry-utils.js';
 import { history } from '../core/history.js';
 import { MoveCommand, DeleteCommand } from '../core/commands/move-command.js';
+import { eventBus } from '../core/event-bus.js';
 
 export class SelectTool extends ToolInterface {
   constructor() {
@@ -19,6 +20,8 @@ export class SelectTool extends ToolInterface {
     this.dragStart = null;
     this.resizeStart = null;
     this.initialProps = null;
+    this.lastClickId = null;
+    this.lastClickTime = 0;
   }
 
   getHandles(a) {
@@ -34,8 +37,15 @@ export class SelectTool extends ToolInterface {
       y = a.y - s / 2;
       w = s;
       h = s;
-    } else if (a.type === 'text' && a.align === 'center') {
-      x = a.x - w / 2;
+    } else if (a.type === 'stamp') {
+      const s = a.size || a.width || 28;
+      x = a.x - s / 2;
+      y = a.y - s / 2;
+      w = s;
+      h = s;
+    } else if (a.type === 'text') {
+      w = a.width || 100;
+      h = a.height || 40;
     }
 
     return {
@@ -81,9 +91,13 @@ export class SelectTool extends ToolInterface {
       if (a.type === 'emoji') {
         const s = a.size || 36;
         bounds = { x: a.x - s / 2 - 8, y: a.y - s / 2 - 8, width: s + 16, height: s + 16 };
-      } else if (a.type === 'text' && a.align === 'center') {
-        const w = a.width || 60;
-        bounds = { x: a.x - w / 2 - 6, y: a.y - 6, width: w + 12, height: (a.height || 30) + 12 };
+      } else if (a.type === 'stamp') {
+        const s = a.size || a.width || 28;
+        bounds = { x: a.x - s / 2 - 8, y: a.y - s / 2 - 8, width: s + 16, height: s + 16 };
+      } else if (a.type === 'text') {
+        const w = a.width || 100;
+        const h = a.height || 40;
+        bounds = { x: a.x - 6, y: a.y - 6, width: w + 12, height: h + 12 };
       } else {
         bounds = {
           x: a.x - 6,
@@ -101,6 +115,15 @@ export class SelectTool extends ToolInterface {
     if (hit) {
       this.selectedObject = hit;
       store.setSelectedObject(hit.id);
+
+      // Check double click on text annotation to open inline editor
+      if (hit.type === 'text' && (e.detail === 2 || (this.lastClickId === hit.id && (Date.now() - this.lastClickTime < 350)))) {
+        eventBus.emit('edit-text-annotation', hit);
+        return;
+      }
+      this.lastClickId = hit.id;
+      this.lastClickTime = Date.now();
+
       this.isDragging = true;
       this.isResizing = false;
       this.dragStart = { ...point };
@@ -117,14 +140,15 @@ export class SelectTool extends ToolInterface {
   onPointerMove(e, point, store, docModel) {
     // Handle Resizing
     if (this.isResizing && this.selectedObject && this.resizeStart && this.initialProps) {
-      if (this.selectedObject.type === 'emoji') {
-        // Dragging handle scales emoji proportionally around its center
+      if (this.selectedObject.type === 'emoji' || this.selectedObject.type === 'stamp') {
+        // Dragging handle scales emoji or stamp proportionally around its center
         const centerX = this.initialProps.x;
         const centerY = this.initialProps.y;
         const initialDist = Math.hypot(this.resizeStart.x - centerX, this.resizeStart.y - centerY);
         const currentDist = Math.hypot(point.x - centerX, point.y - centerY);
         const ratio = initialDist > 0 ? (currentDist / initialDist) : 1;
-        const newSize = Math.max(16, Math.min(260, Math.round((this.initialProps.size || 36) * ratio)));
+        const baseSize = this.initialProps.size || this.initialProps.width || 28;
+        const newSize = Math.max(16, Math.min(320, Math.round(baseSize * ratio)));
 
         docModel.updateAnnotation(this.selectedObject.id, {
           size: newSize,
@@ -132,8 +156,11 @@ export class SelectTool extends ToolInterface {
           height: newSize,
         });
 
-        // Keep slider synchronized in inspector
-        store.setToolOption('emojiSize', newSize);
+        if (this.selectedObject.type === 'emoji') {
+          store.setToolOption('emojiSize', newSize);
+        } else {
+          store.setToolOption('stampSize', newSize);
+        }
       } else {
         // Regular rectangular shapes resize
         let { x, y, width, height } = this.initialProps;
