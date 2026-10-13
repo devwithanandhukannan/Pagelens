@@ -76,14 +76,9 @@ class StudioApp {
     if (sessionId) {
       await this.loadSession(sessionId);
     } else {
-      // Check for autosave backup or load sample
-      const backup = AutosaveService.getBackup();
-      if (backup && backup.annotations && backup.annotations.length > 0) {
-        this.loadSampleCapture();
-      } else {
-        // Automatically preload the high-fidelity Sonoma dashboard sample so the editor is immediately interactive
-        this.loadSampleCapture();
-      }
+      // Show clean empty state guidance over dot-grid canvas
+      this.transformWrapper.style.display = 'none';
+      this.emptyState.show();
     }
 
     // Set initial tool
@@ -141,7 +136,6 @@ class StudioApp {
   }
 
   bindWindowEvents() {
-    eventBus.on('load-sample-capture', () => this.loadSampleCapture());
     eventBus.on('load-image-element', ({ image, title, fromHistory }) => {
       this.setDocumentImage(image, { title, isExisting: !!fromHistory });
     });
@@ -332,6 +326,9 @@ class StudioApp {
   updateViewportTransform() {
     if (!this.transformWrapper) return;
     this.transformWrapper.style.transform = `translate(${viewport.panX}px, ${viewport.panY}px) scale(${viewport.zoom})`;
+    if (this.container) {
+      this.container.style.backgroundPosition = `${viewport.panX}px ${viewport.panY}px`;
+    }
   }
 
   requestRender() {
@@ -512,192 +509,15 @@ class StudioApp {
       console.warn('[Studio] Failed to load session:', e);
     }
 
-    this.loadSampleCapture();
+    // Fallback to empty state if session loading fails or does not contain image
+    this.transformWrapper.style.display = 'none';
+    this.emptyState.show();
   }
 
   loadSampleCapture() {
-    // Generate a high-fidelity Apple macOS Sonoma dashboard image
-    const sampleCanvas = document.createElement('canvas');
-    sampleCanvas.width = 1200;
-    sampleCanvas.height = 920;
-    const sctx = sampleCanvas.getContext('2d');
-
-    // Sonoma Obsidian gradient canvas background
-    const bgGrad = sctx.createLinearGradient(0, 0, 1200, 920);
-    bgGrad.addColorStop(0, '#0E1015');
-    bgGrad.addColorStop(1, '#0A0B0E');
-    sctx.fillStyle = bgGrad;
-    sctx.fillRect(0, 0, 1200, 920);
-
-    // Top Header Banner
-    sctx.fillStyle = '#17181D';
-    sctx.fillRect(0, 0, 1200, 68);
-
-    // Pagelens Brand Logo badge (Squircle + P + Lens Dot)
-    sctx.fillStyle = '#5C59EC';
-    sctx.beginPath();
-    sctx.roundRect ? sctx.roundRect(30, 20, 28, 28, 7) : sctx.fillRect(30, 20, 28, 28);
-    sctx.fill();
-
-    sctx.fillStyle = '#FFFFFF';
-    sctx.beginPath();
-    sctx.roundRect ? sctx.roundRect(38, 25, 4, 18, 2) : sctx.fillRect(38, 25, 4, 18);
-    sctx.arc(46, 31, 6, -Math.PI / 2, Math.PI / 2);
-    sctx.fill();
-
-    sctx.fillStyle = '#5C59EC';
-    sctx.beginPath();
-    sctx.arc(46, 31, 3.2, 0, Math.PI * 2);
-    sctx.fill();
-
-    sctx.fillStyle = '#F5B700';
-    sctx.beginPath();
-    sctx.arc(46, 31, 1.4, 0, Math.PI * 2);
-    sctx.fill();
-
-    sctx.fillStyle = '#F8FAFC';
-    sctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
-    sctx.fillText('Dashboard Overview', 72, 40);
-
-    sctx.font = '500 13px -apple-system, sans-serif';
-    sctx.fillStyle = '#94A3B8';
-    sctx.fillText('Production Metrics • Overview', 320, 40);
-
-    // KPI Cards
-    const cards = [
-      { title: 'TOTAL API REQUESTS', value: '4,892,104', change: '+18.4% today', color: '#10B981' },
-      { title: 'P99 LATENCY', value: '24.2 ms', change: '-4.1 ms optimal', color: '#10B981' },
-      { title: 'AUTHENTICATED SESSIONS', value: '184,920', change: '+2,410 active', color: '#6D63E6' },
-      { title: 'SECURITY TOKENS ISSUED', value: 'sk_live_9921_x9f7a', change: 'CONFIDENTIAL', color: '#EF4444' }
-    ];
-
-    cards.forEach((card, i) => {
-      const cx = 40 + i * 280;
-      const cy = 100;
-      sctx.fillStyle = '#17181D';
-      sctx.beginPath();
-      sctx.roundRect ? sctx.roundRect(cx, cy, 260, 120, 16) : sctx.fillRect(cx, cy, 260, 120);
-      sctx.fill();
-
-      sctx.fillStyle = '#94A3B8';
-      sctx.font = '600 11px -apple-system, sans-serif';
-      sctx.fillText(card.title, cx + 20, cy + 30);
-
-      sctx.fillStyle = '#F8FAFC';
-      sctx.font = 'bold 22px "SF Mono", monospace';
-      sctx.fillText(card.value, cx + 20, cy + 68);
-
-      sctx.fillStyle = card.color;
-      sctx.font = '600 12px -apple-system, sans-serif';
-      sctx.fillText(card.change, cx + 20, cy + 98);
-    });
-
-    // Main Chart Card
-    sctx.fillStyle = '#17181D';
-    sctx.beginPath();
-    sctx.roundRect ? sctx.roundRect(40, 248, 1120, 360, 20) : sctx.fillRect(40, 248, 1120, 360);
-    sctx.fill();
-
-    sctx.fillStyle = '#F8FAFC';
-    sctx.font = 'bold 16px -apple-system, sans-serif';
-    sctx.fillText('Network Throughput & Traffic Velocity', 68, 286);
-
-    // Chart grid lines
-    sctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    sctx.lineWidth = 1;
-    for (let y = 330; y <= 540; y += 50) {
-      sctx.beginPath();
-      sctx.moveTo(68, y);
-      sctx.lineTo(1120, y);
-      sctx.stroke();
-    }
-
-    // Chart smooth curve (Electric violet gradient)
-    sctx.beginPath();
-    sctx.moveTo(68, 510);
-    const points = [
-      [140, 480], [240, 420], [360, 460], [480, 370],
-      [600, 390], [720, 330], [840, 360], [960, 320], [1080, 340]
-    ];
-    for (const pt of points) {
-      sctx.lineTo(pt[0], pt[1]);
-    }
-    sctx.strokeStyle = '#6D63E6';
-    sctx.lineWidth = 3.5;
-    sctx.stroke();
-
-    // Chart fill area
-    sctx.lineTo(1080, 550);
-    sctx.lineTo(68, 550);
-    sctx.closePath();
-    const chartFill = sctx.createLinearGradient(0, 320, 0, 550);
-    chartFill.addColorStop(0, 'rgba(109, 99, 230, 0.35)');
-    chartFill.addColorStop(1, 'rgba(109, 99, 230, 0.0)');
-    sctx.fillStyle = chartFill;
-    sctx.fill();
-
-    // Sensitive Customer Table (Ideal for testing redaction and bug stamps)
-    sctx.fillStyle = '#17181D';
-    sctx.beginPath();
-    sctx.roundRect ? sctx.roundRect(40, 630, 1120, 250, 20) : sctx.fillRect(40, 630, 1120, 250);
-    sctx.fill();
-
-    sctx.fillStyle = '#F8FAFC';
-    sctx.font = 'bold 16px -apple-system, sans-serif';
-    sctx.fillText('Recent Production Deployments & Access Tokens', 68, 668);
-
-    const rows = [
-      ['user_john@acme.corp', 'Admin Access', 'JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', 'Active'],
-      ['sarah_lead@fintech.io', 'Billing Manager', 'API Key: live_sec_9941829104812903', 'Active'],
-      ['alex_sec@defense.gov', 'Auditor Role', 'Credit Card: 4532-8819-2091-8841', 'Restricted']
-    ];
-
-    rows.forEach((row, idx) => {
-      const ry = 710 + idx * 46;
-      sctx.fillStyle = '#94A3B8';
-      sctx.font = '13px "SF Mono", monospace';
-      sctx.fillText(row[0], 68, ry);
-      sctx.fillText(row[1], 320, ry);
-      sctx.fillStyle = '#EF4444'; // Highlight sensitive data
-      sctx.fillText(row[2], 520, ry);
-      sctx.fillStyle = '#10B981';
-      sctx.fillText(row[3], 1020, ry);
-    });
-
-    const sampleTextBlocks = [
-      { text: 'Pagelens Performance Analytics', x: 40, y: 36, width: 440, height: 32 },
-      { text: 'System Health: 99.98% Uptime', x: 920, y: 38, width: 240, height: 28 },
-      { text: 'Active Workers', x: 68, y: 154, width: 140, height: 20 },
-      { text: '12 Online', x: 68, y: 184, width: 110, height: 32 },
-      { text: 'Memory Usage', x: 448, y: 154, width: 140, height: 20 },
-      { text: '142 MB Normal', x: 448, y: 184, width: 160, height: 32 },
-      { text: 'Capture Latency', x: 828, y: 154, width: 150, height: 20 },
-      { text: '4.8 ms Turbo', x: 828, y: 184, width: 130, height: 32 },
-      { text: 'Throughput & Network Slices (24h Real-Time)', x: 68, y: 310, width: 380, height: 24 },
-      { text: 'Recent Production Deployments & Access Tokens', x: 68, y: 652, width: 410, height: 24 },
-      { text: 'user_john@acme.corp', x: 68, y: 700, width: 220, height: 22 },
-      { text: 'Admin Access', x: 320, y: 700, width: 140, height: 22 },
-      { text: 'JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', x: 520, y: 700, width: 390, height: 22 },
-      { text: 'Active', x: 1020, y: 700, width: 80, height: 22 },
-      { text: 'sarah_lead@fintech.io', x: 68, y: 746, width: 220, height: 22 },
-      { text: 'Billing Manager', x: 320, y: 746, width: 140, height: 22 },
-      { text: 'API Key: live_sec_9941829104812903', x: 520, y: 746, width: 340, height: 22 },
-      { text: 'alex_sec@defense.gov', x: 68, y: 792, width: 220, height: 22 },
-      { text: 'Auditor Role', x: 320, y: 792, width: 140, height: 22 },
-      { text: 'Credit Card: 4532-8819-2091-8841', x: 520, y: 792, width: 310, height: 22 },
-      { text: 'Restricted', x: 1020, y: 792, width: 90, height: 22 }
-    ];
-
-    const sampleImg = new Image();
-    sampleImg.onload = () => {
-      this.setDocumentImage(sampleImg, {
-        title: 'Current Screenshot',
-        url: '',
-        textBlocks: sampleTextBlocks,
-      });
-      this.requestRender();
-    };
-    sampleImg.src = sampleCanvas.toDataURL('image/png');
+    // Deprecated: No sample image loaded by default. Clean workspace provided.
+    this.transformWrapper.style.display = 'none';
+    this.emptyState.show();
   }
 }
 

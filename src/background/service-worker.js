@@ -31,6 +31,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         case 'PAGELENS_CANCEL_CAPTURE': {
           await SessionRegistry.cancelSession();
+          chrome.action.setBadgeText({ text: '' }).catch(() => {});
+          chrome.runtime.sendMessage({ type: 'PAGELENS_CAPTURE_CANCELLED' }).catch(() => {});
           sendResponse({ success: true });
           break;
         }

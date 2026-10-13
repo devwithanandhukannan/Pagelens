@@ -37,23 +37,50 @@ export class EmptyState {
   bindEvents() {
     const fileInput = document.getElementById('empty-file-input');
 
+    const handleFile = (file) => {
+      if (file && file.type && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            eventBus.emit('load-image-element', {
+              image: img,
+              title: file.name.replace(/\.[^/.]+$/, ''),
+            });
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
     if (fileInput) {
       fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              eventBus.emit('load-image-element', {
-                image: img,
-                title: file.name.replace(/\.[^/.]+$/, ''),
-              });
-            };
-            img.src = event.target.result;
-          };
-          reader.readAsDataURL(file);
-        }
+        const file = e.target.files?.[0];
+        if (file) handleFile(file);
+      });
+    }
+
+    const dropZone = document.getElementById('pagelens-empty-state');
+    if (dropZone) {
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) handleFile(file);
       });
     }
   }
@@ -61,10 +88,12 @@ export class EmptyState {
   hide() {
     const el = document.getElementById('pagelens-empty-state');
     if (el) el.style.display = 'none';
+    if (this.container) this.container.style.display = 'none';
   }
 
   show() {
     const el = document.getElementById('pagelens-empty-state');
     if (el) el.style.display = 'flex';
+    if (this.container) this.container.style.display = 'flex';
   }
 }

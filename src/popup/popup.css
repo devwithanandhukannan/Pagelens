@@ -110,6 +110,35 @@ body {
   transform: translateY(-1px);
 }
 
+.popup-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.popup-btn.danger {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+}
+
+.popup-btn.danger:hover {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.5);
+  transform: translateY(-1px);
+}
+
+.popup-btn.danger:active {
+  transform: scale(0.97);
+}
+
+.popup-btn.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .shortcut-badge {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -118,6 +147,50 @@ body {
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.18);
   color: inherit;
+}
+
+.danger-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #FFFFFF;
+}
+
+.pill-badge.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.pill-badge.active-pulse {
+  background: rgba(99, 102, 241, 0.18);
+  color: #818CF8;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  animation: pulse-badge 2s infinite ease-in-out;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Error Card */
+.popup-error-card {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #F87171;
+  border-radius: var(--radius-card);
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+[data-theme="porcelain"] .popup-error-card {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #DC2626;
 }
 
 .popup-footer {

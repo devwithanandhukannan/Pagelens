@@ -15,34 +15,52 @@
         </div>
         <span class="popup-title">Pagelens</span>
       </div>
-      <span class="pill-badge mint" style="font-size: 10px;">Ready</span>
+      <span id="popup-header-badge" class="pill-badge mint" style="font-size: 10px;">Ready</span>
     </div>
 
-    <!-- Primary: Full Page Capture -->
-    <button class="popup-btn primary spring-btn" id="btn-capture-full">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
-        <span>Full Page</span>
-      </div>
-      <span class="shortcut-badge" id="shortcut-full">CMD+SHIFT+S</span>
-    </button>
+    <!-- Actions Group: Full Page, Visible Area, Studio (Hidden during capture) -->
+    <div id="popup-actions-area" class="popup-actions-group">
+      <!-- Primary: Full Page Capture -->
+      <button class="popup-btn primary spring-btn" id="btn-capture-full">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+          <span>Full Page</span>
+        </div>
+        <span class="shortcut-badge" id="shortcut-full">CMD+SHIFT+S</span>
+      </button>
 
-    <!-- Secondary: Visible Area -->
-    <button class="popup-btn secondary spring-btn" id="btn-capture-visible">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>Visible Area</span>
-      </div>
-      <span class="shortcut-badge" id="shortcut-vis">CMD+SHIFT+V</span>
-    </button>
+      <!-- Secondary: Visible Area -->
+      <button class="popup-btn secondary spring-btn" id="btn-capture-visible">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Visible Area</span>
+        </div>
+        <span class="shortcut-badge" id="shortcut-vis">CMD+SHIFT+V</span>
+      </button>
 
-    <!-- Open Studio Direct -->
-    <button class="popup-btn secondary spring-btn" id="btn-open-studio" style="height: 36px; font-size: 12px;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        <span>Open Studio Editor</span>
-      </div>
-    </button>
+      <!-- Open Studio Direct -->
+      <button class="popup-btn secondary spring-btn" id="btn-open-studio" style="height: 36px; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <span>Open Studio Editor</span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Active Capture Actions (Cancel Red Button - Shown during capture) -->
+    <div id="popup-cancel-area" style="display: none;">
+      <button class="popup-btn danger spring-btn" id="btn-cancel-capture">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <span id="btn-cancel-text">Cancel Capture</span>
+        </div>
+        <span class="shortcut-badge danger-badge">ESC</span>
+      </button>
+    </div>
 
     <!-- Protected Page Warning Card (Clean, non-colliding alert) -->
     <div id="popup-notice-card" class="popup-notice-card" style="display: none;">
@@ -50,10 +68,20 @@
       <span id="popup-notice-text">Internal browser pages are protected. Switch to any regular website to capture.</span>
     </div>
 
+    <!-- Error Alert Card -->
+    <div id="popup-error-area" class="popup-error-card" style="display: none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+        <span style="font-weight: 600; font-size: 12px;" id="popup-error-title">Capture Error</span>
+        <span id="popup-error-message" style="color: inherit; opacity: 0.9; word-break: break-word;"></span>
+      </div>
+      <button id="btn-dismiss-error" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0 4px; opacity: 0.7; font-size: 16px; line-height: 1;">&times;</button>
+    </div>
+
     <!-- Status / Segmented Progress Card (Only shown during active capture) -->
     <div id="popup-status-area" style="display: none;" class="popup-status-card">
       <div class="popup-hud-header">
-        <span class="popup-hud-title">Screen capture in progress...</span>
+        <span class="popup-hud-title" id="popup-hud-title">Screen capture in progress...</span>
         <span class="popup-hud-slice" id="popup-status-text">Preparing...</span>
       </div>
       <div class="popup-hud-segments" id="popup-hud-segments">

@@ -154,10 +154,11 @@ export class CaptureController {
 
       // 4. Calculate slices and auto-scale settle delay
       const isElementScroll = !!geom.isElementScroll;
-      const viewportH = geom.viewportHeight;
-      const totalH = geom.scrollHeight;
+      const viewportH = Math.max(1, geom.viewportHeight || 800);
+      const totalH = Math.max(1, geom.scrollHeight || viewportH);
       const scrollStep = isElementScroll ? (geom.scrollStep || viewportH) : viewportH;
-      const totalSlices = geom.totalSlices || Math.max(1, Math.ceil(totalH / scrollStep));
+      const rawSlices = geom.totalSlices || Math.max(1, Math.ceil(totalH / scrollStep));
+      const totalSlices = Math.min(120, rawSlices);
       const topOffset = geom.topOffset || 0;
       const bottomOffset = geom.bottomOffset || 0;
       const slices = [];
@@ -199,6 +200,10 @@ export class CaptureController {
           }
         });
 
+        if (await SessionRegistry.isCancelled()) {
+          throw new PagelensError(ERROR_CODES.CAPTURE_CANCELLED, 'Capture cancelled by user.');
+        }
+
         // Update toolbar action badge & popup progress
         chrome.action.setBadgeText({ text: `${i + 1}/${totalSlices}`, tabId: tab.id }).catch(() => {});
         chrome.action.setBadgeBackgroundColor({ color: '#6366F1' }).catch(() => {});
@@ -218,8 +223,16 @@ export class CaptureController {
           await chrome.tabs.sendMessage(tab.id, { type: 'PAGELENS_HIDE_STICKY' });
         }
 
+        if (await SessionRegistry.isCancelled()) {
+          throw new PagelensError(ERROR_CODES.CAPTURE_CANCELLED, 'Capture cancelled by user.');
+        }
+
         // Capture visible slice with resilient rate-limit throttling and backoff retry
         const sliceDataUrl = await this.captureTabWithRetry(tab.windowId, { format: 'png' });
+
+        if (await SessionRegistry.isCancelled()) {
+          throw new PagelensError(ERROR_CODES.CAPTURE_CANCELLED, 'Capture cancelled by user.');
+        }
 
         slices.push({
           index: i,
@@ -227,6 +240,10 @@ export class CaptureController {
           height: isElementScroll ? scrollStep : viewportH,
           dataUrl: sliceDataUrl,
         });
+      }
+
+      if (await SessionRegistry.isCancelled()) {
+        throw new PagelensError(ERROR_CODES.CAPTURE_CANCELLED, 'Capture cancelled by user.');
       }
 
       // 5. Update progress: Stitching
@@ -241,12 +258,15 @@ export class CaptureController {
         }
       }).catch(() => {});
 
+      // Safe DPR clamp for extremely tall documents
+      const dprToUse = (totalH * (geom.dpr || 1) > 28000) ? 1 : (geom.dpr || 1);
+
       // 6. Stitch slices off the main thread
       const stitched = await stitchSlices({
         slices,
         totalWidth: geom.viewportWidth,
         totalHeight: geom.scrollHeight,
-        dpr: geom.dpr,
+        dpr: dprToUse,
         isElementScroll,
         topOffset,
         bottomOffset,

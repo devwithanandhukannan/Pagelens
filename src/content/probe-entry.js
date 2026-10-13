@@ -358,7 +358,15 @@
   }
 
   // --- 5. Scroll Driver (Optimized paint settle for slow processors & heavy DOMs) ---
+  let isInteractionLocked = false;
+  let isProgrammaticScroll = false;
+  let lockedScrollTarget = { x: 0, y: 0 };
+  let lockStyleElement = null;
+
   async function scrollToPosition(targetX, targetY, delayMs = 180) {
+    lockedScrollTarget = { x: targetX, y: targetY };
+    isProgrammaticScroll = true;
+
     return new Promise((resolve) => {
       if (primaryScrollElement) {
         primaryScrollElement.scrollTop = targetY;
@@ -375,6 +383,7 @@
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setTimeout(() => {
+            isProgrammaticScroll = false;
             const actualX = primaryScrollElement ? primaryScrollElement.scrollLeft : (window.scrollX || window.pageXOffset || 0);
             const actualY = primaryScrollElement ? primaryScrollElement.scrollTop : (window.scrollY || window.pageYOffset || 0);
             resolve({
@@ -414,15 +423,112 @@
     removeCaptureOverlay();
   }
 
-  // --- 7. Restore Guard ---
+  // --- 7. Browser Scroll & Interaction Lock (Prevents User Scroll Interference) ---
+  function onBlockWheel(e) {
+    if (!isInteractionLocked) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function onBlockTouch(e) {
+    if (!isInteractionLocked) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function onBlockKeydown(e) {
+    if (!isInteractionLocked) return;
+    if (e.key === 'Escape') {
+      onKeyDownEscape(e);
+      return;
+    }
+    const scrollKeys = [
+      'ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight',
+      'Space', ' ', 'PageDown', 'PageUp', 'Home', 'End', 'Tab'
+    ];
+    if (scrollKeys.includes(e.key)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }
+
+  function onBlockPointer(e) {
+    if (!isInteractionLocked) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+
+  function onScrollGuard() {
+    if (!isInteractionLocked || isProgrammaticScroll) return;
+    // Snap back immediately to the current locked slice position if user attempts to scroll
+    if (primaryScrollElement) {
+      primaryScrollElement.scrollTop = lockedScrollTarget.y;
+      primaryScrollElement.scrollLeft = lockedScrollTarget.x;
+    } else {
+      window.scrollTo({ left: lockedScrollTarget.x, top: lockedScrollTarget.y, behavior: 'instant' });
+    }
+  }
+
+  function lockBrowser() {
+    if (isInteractionLocked) return;
+    isInteractionLocked = true;
+    isProgrammaticScroll = false;
+
+    // Suppress wheel, touch, scroll keys, pointer interactions during capture
+    window.addEventListener('wheel', onBlockWheel, { capture: true, passive: false });
+    document.addEventListener('wheel', onBlockWheel, { capture: true, passive: false });
+    window.addEventListener('touchmove', onBlockTouch, { capture: true, passive: false });
+    window.addEventListener('touchstart', onBlockTouch, { capture: true, passive: false });
+    window.addEventListener('keydown', onBlockKeydown, { capture: true });
+    window.addEventListener('mousedown', onBlockPointer, { capture: true });
+    window.addEventListener('pointerdown', onBlockPointer, { capture: true });
+    window.addEventListener('click', onBlockPointer, { capture: true });
+    window.addEventListener('scroll', onScrollGuard, { capture: true, passive: false });
+
+    if (!lockStyleElement) {
+      lockStyleElement = document.createElement('style');
+      lockStyleElement.id = 'pagelens-lock-styles';
+      lockStyleElement.textContent = `
+        * {
+          cursor: wait !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+        }
+      `;
+      document.head.appendChild(lockStyleElement);
+    }
+  }
+
+  function unlockBrowser() {
+    isInteractionLocked = false;
+    isProgrammaticScroll = false;
+
+    window.removeEventListener('wheel', onBlockWheel, { capture: true });
+    document.removeEventListener('wheel', onBlockWheel, { capture: true });
+    window.removeEventListener('touchmove', onBlockTouch, { capture: true });
+    window.removeEventListener('touchstart', onBlockTouch, { capture: true });
+    window.removeEventListener('keydown', onBlockKeydown, { capture: true });
+    window.removeEventListener('mousedown', onBlockPointer, { capture: true });
+    window.removeEventListener('pointerdown', onBlockPointer, { capture: true });
+    window.removeEventListener('click', onBlockPointer, { capture: true });
+    window.removeEventListener('scroll', onScrollGuard, { capture: true });
+
+    if (lockStyleElement && lockStyleElement.parentNode) {
+      lockStyleElement.parentNode.removeChild(lockStyleElement);
+      lockStyleElement = null;
+    }
+  }
+
+  // --- 8. Restore Guard ---
   function initializeRestoreGuard(initialX, initialY) {
     originalScrollPosition = { x: initialX, y: initialY };
+    lockedScrollTarget = { x: initialX, y: initialY };
     isGuarded = true;
-    window.addEventListener('keydown', onKeyDownEscape, { capture: true });
+    lockBrowser();
   }
 
   function onKeyDownEscape(e) {
-    if (e.key === 'Escape' && isGuarded) {
+    if (e.key === 'Escape') {
       if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
         chrome.runtime.sendMessage({ type: 'PAGELENS_CANCEL_CAPTURE' }).catch(() => {});
       }
@@ -431,8 +537,9 @@
   }
 
   function restorePage() {
-    if (!isGuarded) return;
+    if (!isGuarded && !isInteractionLocked) return;
     try {
+      unlockBrowser();
       if (primaryScrollElement) {
         primaryScrollElement.scrollTop = originalElementScrollTop;
         primaryScrollElement.dispatchEvent(new Event('scroll', { bubbles: true }));
@@ -445,8 +552,8 @@
       restoreStickyElements();
       unfreezeMotion();
       hideCaptureOverlay();
-      window.removeEventListener('keydown', onKeyDownEscape, { capture: true });
     } finally {
+      unlockBrowser();
       isGuarded = false;
       primaryScrollElement = null;
     }
@@ -749,5 +856,7 @@
     hideCaptureOverlay,
     initializeRestoreGuard,
     restorePage,
+    lockBrowser,
+    unlockBrowser,
   };
 })();

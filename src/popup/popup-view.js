@@ -6,19 +6,31 @@
 import { popupState } from './popup-state.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  const actionsArea = document.getElementById('popup-actions-area');
   const fullPageBtn = document.getElementById('btn-capture-full');
   const visibleBtn = document.getElementById('btn-capture-visible');
   const openStudioBtn = document.getElementById('btn-open-studio');
+  const cancelArea = document.getElementById('popup-cancel-area');
+  const cancelBtn = document.getElementById('btn-cancel-capture');
+  const cancelBtnText = document.getElementById('btn-cancel-text');
   const statusContainer = document.getElementById('popup-status-area');
+  const hudTitle = document.getElementById('popup-hud-title');
   const statusText = document.getElementById('popup-status-text');
   const noticeCard = document.getElementById('popup-notice-card');
   const noticeText = document.getElementById('popup-notice-text');
+  const errorArea = document.getElementById('popup-error-area');
+  const errorTitle = document.getElementById('popup-error-title');
+  const errorMessage = document.getElementById('popup-error-message');
+  const dismissErrorBtn = document.getElementById('btn-dismiss-error');
+  const headerBadge = document.getElementById('popup-header-badge');
 
   // Detect platform for shortcut badges
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const modKey = isMac ? 'CMD' : 'CTRL';
-  document.getElementById('shortcut-full').textContent = `${modKey}+SHIFT+S`;
-  document.getElementById('shortcut-vis').textContent = `${modKey}+SHIFT+V`;
+  const fullBadge = document.getElementById('shortcut-full');
+  const visBadge = document.getElementById('shortcut-vis');
+  if (fullBadge) fullBadge.textContent = `${modKey}+SHIFT+S`;
+  if (visBadge) visBadge.textContent = `${modKey}+SHIFT+V`;
 
   const updateSegments = (progressPct) => {
     const blocks = document.querySelectorAll('.popup-seg-block');
@@ -38,25 +50,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
   popupState.subscribe((state) => {
     if (state.status === 'capturing' || state.status === 'stitching') {
+      // HIDE capture buttons, SHOW cancel button
+      if (actionsArea) actionsArea.style.display = 'none';
+      if (cancelArea) cancelArea.style.display = 'block';
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (cancelBtnText) cancelBtnText.textContent = 'Cancel Capture';
+
       if (noticeCard) noticeCard.style.display = 'none';
-      statusContainer.style.display = 'flex';
-      statusText.textContent = state.message || 'Capturing...';
+      if (errorArea) errorArea.style.display = 'none';
+
+      if (statusContainer) statusContainer.style.display = 'flex';
+      if (hudTitle) hudTitle.textContent = state.status === 'stitching' ? 'Stitching slices...' : 'Screen capture in progress...';
+      if (statusText) statusText.textContent = state.message || 'Capturing...';
       updateSegments(state.progress || 20);
-      fullPageBtn.disabled = true;
-      visibleBtn.disabled = true;
+
+      if (headerBadge) {
+        headerBadge.textContent = state.status === 'stitching' ? 'Stitching' : 'Capturing';
+        headerBadge.className = 'pill-badge active-pulse';
+      }
     } else if (state.status === 'error') {
-      statusContainer.style.display = 'flex';
-      let displayMsg = state.message;
-      if (displayMsg && (displayMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND') || displayMsg.includes('quota'))) {
+      // SHOW capture buttons, HIDE cancel button
+      if (actionsArea) actionsArea.style.display = 'flex';
+      if (cancelArea) cancelArea.style.display = 'none';
+      if (statusContainer) statusContainer.style.display = 'none';
+
+      let displayMsg = state.message || 'An unexpected error occurred during capture.';
+      if (displayMsg.includes('MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND') || displayMsg.includes('quota')) {
         displayMsg = 'Capture rate limit reached. Waiting a moment before retry...';
       }
-      statusText.textContent = `Error: ${displayMsg}`;
-      fullPageBtn.disabled = false;
-      visibleBtn.disabled = false;
+
+      if (errorArea && errorMessage) {
+        errorArea.style.display = 'flex';
+        errorMessage.textContent = displayMsg;
+      }
+
+      if (headerBadge) {
+        headerBadge.textContent = 'Failed';
+        headerBadge.className = 'pill-badge danger';
+      }
+
+      if (fullPageBtn) fullPageBtn.disabled = false;
+      if (visibleBtn) visibleBtn.disabled = false;
     } else {
-      statusContainer.style.display = 'none';
+      // IDLE
+      if (actionsArea) actionsArea.style.display = 'flex';
+      if (cancelArea) cancelArea.style.display = 'none';
+      if (statusContainer) statusContainer.style.display = 'none';
+
+      if (headerBadge) {
+        headerBadge.textContent = 'Ready';
+        headerBadge.className = 'pill-badge mint';
+      }
+
+      if (fullPageBtn) fullPageBtn.disabled = false;
+      if (visibleBtn) visibleBtn.disabled = false;
     }
   });
+
+  // Cancel Button Action
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      cancelBtn.disabled = true;
+      if (cancelBtnText) cancelBtnText.textContent = 'Cancelling...';
+      if (statusText) statusText.textContent = 'Stopping capture...';
+
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          await chrome.runtime.sendMessage({ type: 'PAGELENS_CANCEL_CAPTURE' });
+        } catch (_) {}
+      }
+      popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+    });
+  }
+
+  // Dismiss Error Alert
+  if (dismissErrorBtn && errorArea) {
+    dismissErrorBtn.addEventListener('click', () => {
+      errorArea.style.display = 'none';
+      if (headerBadge) {
+        headerBadge.textContent = 'Ready';
+        headerBadge.className = 'pill-badge mint';
+      }
+    });
+  }
 
   // Listen to live progress broadcast from capture controller
   if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
@@ -64,51 +140,90 @@ document.addEventListener('DOMContentLoaded', () => {
       if (msg.type === 'PAGELENS_CAPTURE_PROGRESS' && msg.payload) {
         const { text, progress } = msg.payload;
         if (noticeCard) noticeCard.style.display = 'none';
+        if (actionsArea) actionsArea.style.display = 'none';
+        if (cancelArea) cancelArea.style.display = 'block';
         if (statusContainer) statusContainer.style.display = 'flex';
         if (statusText && text) statusText.textContent = text;
         updateSegments(progress || 50);
+      } else if (msg.type === 'PAGELENS_CAPTURE_CANCELLED') {
+        popupState.setState({ status: 'idle', message: 'Capture cancelled' });
       }
     });
   }
 
-  // 1. Capture Full Page
-  fullPageBtn.addEventListener('click', async () => {
-    popupState.setState({ status: 'capturing', message: 'Measuring document...', progress: 20 });
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      try {
-        const response = await chrome.runtime.sendMessage({ type: 'PAGELENS_CAPTURE_FULL_PAGE' });
-        if (response && response.success) {
-          window.close(); // Close popup upon Studio launch
-        } else if (response && response.error) {
-          popupState.setState({ status: 'error', message: response.error });
-        }
-      } catch (err) {
-        popupState.setState({ status: 'error', message: err.message });
+  // Check active session on popup open
+  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    chrome.runtime.sendMessage({ type: 'PAGELENS_GET_CAPTURE_STATE' }).then((res) => {
+      if (res && res.success && res.state && res.state !== 'idle') {
+        popupState.setState({ status: 'capturing', message: 'Capture in progress...', progress: 35 });
       }
-    } else {
-      // Testing/Simulator fallback
-      window.open('../studio/index.html', '_blank');
-    }
-  });
+    }).catch(() => {});
+  }
+
+  // 1. Capture Full Page
+  if (fullPageBtn) {
+    fullPageBtn.addEventListener('click', async () => {
+      if (errorArea) errorArea.style.display = 'none';
+      popupState.setState({ status: 'capturing', message: 'Measuring document...', progress: 15 });
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const response = await chrome.runtime.sendMessage({ type: 'PAGELENS_CAPTURE_FULL_PAGE' });
+          if (response && response.success) {
+            window.close(); // Close popup upon Studio launch
+          } else if (response && response.code === 'CAPTURE_CANCELLED') {
+            popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+          } else if (response && response.error) {
+            if (response.error.toLowerCase().includes('cancel')) {
+              popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+            } else {
+              popupState.setState({ status: 'error', message: response.error });
+            }
+          }
+        } catch (err) {
+          if (err.message && err.message.toLowerCase().includes('cancel')) {
+            popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+          } else {
+            popupState.setState({ status: 'error', message: err.message });
+          }
+        }
+      } else {
+        // Testing/Simulator fallback
+        window.open('../studio/index.html', '_blank');
+      }
+    });
+  }
 
   // 2. Capture Visible Area
-  visibleBtn.addEventListener('click', async () => {
-    popupState.setState({ status: 'capturing', message: 'Capturing viewport...', progress: 50 });
-    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-      try {
-        const response = await chrome.runtime.sendMessage({ type: 'PAGELENS_CAPTURE_VISIBLE' });
-        if (response && response.success) {
-          window.close();
-        } else if (response && response.error) {
-          popupState.setState({ status: 'error', message: response.error });
+  if (visibleBtn) {
+    visibleBtn.addEventListener('click', async () => {
+      if (errorArea) errorArea.style.display = 'none';
+      popupState.setState({ status: 'capturing', message: 'Capturing viewport...', progress: 50 });
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        try {
+          const response = await chrome.runtime.sendMessage({ type: 'PAGELENS_CAPTURE_VISIBLE' });
+          if (response && response.success) {
+            window.close();
+          } else if (response && response.code === 'CAPTURE_CANCELLED') {
+            popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+          } else if (response && response.error) {
+            if (response.error.toLowerCase().includes('cancel')) {
+              popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+            } else {
+              popupState.setState({ status: 'error', message: response.error });
+            }
+          }
+        } catch (err) {
+          if (err.message && err.message.toLowerCase().includes('cancel')) {
+            popupState.setState({ status: 'idle', message: 'Capture cancelled' });
+          } else {
+            popupState.setState({ status: 'error', message: err.message });
+          }
         }
-      } catch (err) {
-        popupState.setState({ status: 'error', message: err.message });
+      } else {
+        window.open('../studio/index.html', '_blank');
       }
-    } else {
-      window.open('../studio/index.html', '_blank');
-    }
-  });
+    });
+  }
 
   // 3. Open Studio directly
   if (openStudioBtn) {
@@ -184,9 +299,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       openStudioBtn?.click();
     }
-    // Escape closes popup
+    // Escape closes popup or cancels active capture
     else if (e.key === 'Escape') {
-      window.close();
+      if (popupState.status === 'capturing' || popupState.status === 'stitching') {
+        e.preventDefault();
+        cancelBtn?.click();
+      } else {
+        window.close();
+      }
     }
   });
 });

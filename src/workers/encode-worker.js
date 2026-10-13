@@ -38,6 +38,13 @@ export function planTiles(totalWidth, totalHeight, maxTileDimension = 4096) {
 }
 
 export async function encodeCanvas(canvas, format = 'png', quality = 0.92) {
+  if (!canvas) {
+    throw new Error('Canvas is null or undefined.');
+  }
+  if (canvas.width === 0 || canvas.height === 0) {
+    canvas.width = Math.max(1, canvas.width || 800);
+    canvas.height = Math.max(1, canvas.height || 600);
+  }
   const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
   if (canvas.convertToBlob) {
     return await canvas.convertToBlob({ type: mimeType, quality });

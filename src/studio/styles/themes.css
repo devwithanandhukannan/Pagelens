@@ -8,6 +8,7 @@
 [data-theme="obsidian"],
 [data-theme="dark"] {
   --canvas-bg: #0A0B0E;
+  --canvas-dot: rgba(255, 255, 255, 0.12);
   --surface-primary: #121317;
   --surface-elevated: #17181D;
   --surface-nested: #1F2026;
@@ -30,6 +31,7 @@
 [data-theme="porcelain"],
 [data-theme="light"] {
   --canvas-bg: #F1F4F8;
+  --canvas-dot: rgba(0, 0, 0, 0.10);
   --surface-primary: #FFFFFF;
   --surface-elevated: #FFFFFF;
   --surface-nested: #EFF2F7;
@@ -51,6 +53,7 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="obsidian"]) {
     --canvas-bg: #F1F4F8;
+    --canvas-dot: rgba(0, 0, 0, 0.10);
     --surface-primary: #FFFFFF;
     --surface-elevated: #FFFFFF;
     --surface-nested: #EFF2F7;
